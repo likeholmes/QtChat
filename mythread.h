@@ -18,7 +18,7 @@ protected:
 signals:
     void listIsEmpty();
 private:
-    QList<QTcpSocket> m_sockets;
+    QList<QTcpSocket *> m_sockets;
 };
 
 #endif // MYTHREAD_H

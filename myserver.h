@@ -17,7 +17,7 @@ protected:
     void incomingConnection(qintptr handle) override;
 
 private:
-    QList<MyThread> m_threads;
+    QList<MyThread *> m_threads;
 };
 
 #endif // MYSERVER_H
