@@ -2,12 +2,16 @@
 
 #include <QDataStream>
 #include <QJsonDocument>
-
+#include <QPixmap>
+#include <QDateTime>
+#include <QDir>
+#include <QRandomGenerator>
+#include <QSqlQuery>
 
 MyThread::MyThread(QObject *parent):
     QThread(parent)
 {
-
+    srand(QDateTime::currentSecsSinceEpoch()); //会不会溢出。。。
 }
 
 MyThread::~MyThread()
@@ -85,7 +89,54 @@ void MyThread::handleRequest(QByteArray &data, MySocket *socket)
         }else if(action == "lookup"){ //查找
 
         }else if(action == "sendMsg"){
-            dealSend(json, socket);
+            //dealSend(json, socket);
         }
     }
 }
+
+// 【处理用户注册】
+void MyThread::dealRegister(QJsonObject &json, MySocket *socket)
+{
+    QSqlQuery query;
+    QString name = json["name"].toString();
+    QString rawPassword = json["password"].toString();
+    QString password = encrypt(rawPassword);
+    QString account = QDateTime::currentSecsSinceEpoch() + tr("") + rand()%100; //随机生成账号
+    QString sql = QString("INSERT INTO users (account, password, name) VALUES ('%1', '%2', '%3')")
+               .arg(account).arg(password).arg(name);
+    QString describe;
+    QByteArray avatarData;
+    QString avatarLocalPath;
+    //个性签名
+    if(json.contains("describe") && json["describe"].isString()){
+        describe = json["describe"].toString();
+        sql = QString("INSERT INTO users (account, password, name, describe) VALUES ('%1', '%2', '%3', '%4')")
+                .arg(account).arg(password).arg(name).arg(describe);
+    }
+    //头像数据，需保存到头像表中，保存到文件中
+    if(json.contains("avatarData")){
+        avatarData = json["avatarData"].toVariant().toByteArray();
+        QPixmap avatar;
+        avatar.loadFromData(avatarData); //文件后缀如何规定，是否用自动检测文件头的方式
+        QString format = json["format"].toString();
+        QString fileName = tr("../Server/resource/Avator") +   //相对路径
+                QDateTime::currentMSecsSinceEpoch() + tr(".") + format;
+        avatar.save(QDir(fileName).absolutePath());
+        avatarLocalPath = json["avatarLocalPath"].toString();  //绝对路径
+        //存入头像表中，获取所在行的索引
+        query.exec(QString("INSERT INTO avatars (spath, lpath) VALUES ('%1', '%2')") //[1]
+                   .arg(fileName).arg(avatarLocalPath));
+        query.exec("SELECT * FROM avatars"); //[2]
+        int avatarId = query.size(); //假设每条记录都加在最后一条
+        if (describe.size() > 0){
+            sql = QString("INSERT INTO users (account, password, name, describe, avatar) VALUES ('%1', '%2', '%3', '%4', %5)")
+                    .arg(account).arg(password).arg(name).arg(describe).arg(avatarId);
+        }else{
+            sql = QString("INSERT INTO users (account, password, name, avatar) VALUES ('%1', '%2', '%3', %4)")
+                    .arg(account).arg(password).arg(name).arg(avatarId);
+        }
+    }
+    query.exec(sql);  //[3]
+    generateResponse("register", "success");
+}
+// 【处理用户注册】

@@ -28,6 +28,10 @@ private:
     void dealLogin(QJsonObject &json, MySocket *socket);
     void dealSearch(QJsonObject &json, MySocket *socket);
     void dealSend(QJsonObject &json, MySocket *socket);
+    QString encrypt(QString password); //密码加密
+    QByteArray generateResponse(QString action, QString response, QString type = "",
+                                QString sender = "", QString receiver = "",
+                                QByteArray *content = nullptr, QString format = "");
 
     QList<MySocket *> m_sockets;
 };
