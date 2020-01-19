@@ -19,11 +19,13 @@ SOURCES += \
     main.cpp \
     mainwindow.cpp \
     myserver.cpp \
+    mysocket.cpp \
     mythread.cpp
 
 HEADERS += \
     mainwindow.h \
     myserver.h \
+    mysocket.h \
     mythread.h
 
 FORMS += \

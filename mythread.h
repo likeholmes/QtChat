@@ -1,9 +1,10 @@
 #ifndef MYTHREAD_H
 #define MYTHREAD_H
 
+#include "mysocket.h"
+
 #include <QThread>
 #include <QList>
-#include <QTcpSocket>
 
 class MyThread: public QThread
 {
@@ -17,8 +18,11 @@ protected:
     void run() override;
 signals:
     void listIsEmpty();
+    void error(MySocket::SocketError error);
+private slots:
+    void removeSocket(MySocket *socket);
 private:
-    QList<QTcpSocket *> m_sockets;
+    QList<MySocket *> m_sockets;
 };
 
 #endif // MYTHREAD_H
