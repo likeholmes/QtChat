@@ -5,6 +5,7 @@
 
 #include <QThread>
 #include <QList>
+#include <QJsonObject>
 
 class MyThread: public QThread
 {
@@ -22,6 +23,12 @@ signals:
 private slots:
     void removeSocket(MySocket *socket);
 private:
+    void handleRequest(QByteArray &data, MySocket *socket);
+    void dealRegister(QJsonObject &json, MySocket *socket);
+    void dealLogin(QJsonObject &json, MySocket *socket);
+    void dealSearch(QJsonObject &json, MySocket *socket);
+    void dealSend(QJsonObject &json, MySocket *socket);
+
     QList<MySocket *> m_sockets;
 };
 
