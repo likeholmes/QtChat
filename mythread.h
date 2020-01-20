@@ -32,6 +32,7 @@ private:
     QByteArray generateResponse(QString action, QString response, QString type = "",
                                 QString sender = "", QString receiver = "",
                                 QByteArray *content = nullptr, QString format = "");
+    QString generateToken(int id);
 
     QList<MySocket *> m_sockets;
 };

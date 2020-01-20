@@ -137,6 +137,27 @@ void MyThread::dealRegister(QJsonObject &json, MySocket *socket)
         }
     }
     query.exec(sql);  //[3]
-    generateResponse("register", "success");
+    generateResponse("register", "success"); //处理响应信息，可以作为返回值
 }
 // 【处理用户注册】
+
+void MyThread::dealLogin(QJsonObject &json, MySocket *socket)
+{
+    QString account = json["account"].toString();
+    QString rawPassword = json["password"].toString();
+    QString password = encrypt(rawPassword); //经过某种加密后
+    QSqlQuery query;
+    QString response = "fail";
+    QString authur = "";
+    QString token = "";
+    query.exec(QString("SELECT * FROM users WHERE account = '%1' and password = '%2'").
+               arg(account).arg(password));
+    if(query.next()){  //找到用户之后；颁发某种通行证;
+        //取出id,作为之后的索引返回给客户端，然后客户端再每次请求的时候发送该字段，安全暂不考虑
+        int id = query.value("id").toInt();
+        authur = query.value("name").toString();
+        token = generateToken(id);
+        response = "success";
+    }
+    generateResponse("login", response, token, authur); //type字段在不是传输消息时，可以存放一些简短的响应消息
+}
