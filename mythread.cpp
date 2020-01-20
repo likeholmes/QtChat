@@ -2,6 +2,7 @@
 
 #include <QDataStream>
 #include <QJsonDocument>
+#include <QJsonArray>
 #include <QPixmap>
 #include <QDateTime>
 #include <QDir>
@@ -85,11 +86,13 @@ void MyThread::handleRequest(QByteArray &data, MySocket *socket)
         if(action == "register"){ //注册
             dealRegister(json, socket);
         }else if(action == "login"){ //登录
-            dealRegister(json, socket);
+            dealLogin(json, socket);
         }else if(action == "lookup"){ //查找
-
+            dealSearch(json, socket);
         }else if(action == "sendMsg"){
-            //dealSend(json, socket);
+            dealSend(json, socket); //发送消息
+        }else if(action == "addFriend"){
+            dealAddFriend(json, socket);  //添加好友
         }
     }
 }
@@ -115,9 +118,9 @@ void MyThread::dealRegister(QJsonObject &json, MySocket *socket)
     }
     //头像数据，需保存到头像表中，保存到文件中
     if(json.contains("avatarData")){
-        avatarData = json["avatarData"].toVariant().toByteArray();
-        QPixmap avatar;
-        avatar.loadFromData(avatarData); //文件后缀如何规定，是否用自动检测文件头的方式
+        //avatarData = json["avatarData"].toVariant().toByteArray();
+        QPixmap avatar = json["avatarData"].toVariant().value<QPixmap>();
+        //avatar.loadFromData(avatarData); //文件后缀如何规定，是否用自动检测文件头的方式
         QString format = json["format"].toString();
         QString fileName = tr("../Server/resource/Avator") +   //相对路径
                 QDateTime::currentMSecsSinceEpoch() + tr(".") + format;
@@ -160,4 +163,72 @@ void MyThread::dealLogin(QJsonObject &json, MySocket *socket)
         response = "success";
     }
     generateResponse("login", response, token, authur); //type字段在不是传输消息时，可以存放一些简短的响应消息
+}
+
+void MyThread::dealSearch(QJsonObject &json, MySocket *socket)
+{
+    int id = decodeToken(json["token"].toString());
+    QString account;
+    QString name;
+    QSqlQuery query;
+    QJsonArray users;
+    if (json.contains("account") && json["account"].isString()){
+        account = json["account"].toString();
+        query.exec(QString("SELECT * FROM users WHERE account = '%1'").arg(account));
+        //QJsonObject obj = query.next()
+        if(query.next()){
+            QJsonObject obj;
+            int idx = query.value("id").toInt();
+            obj["name"] = query.value("name").toString();
+            obj["account"] = query.value("account").toString();
+            obj["isgroup"] = query.value("isgroup").toInt();
+            obj["describe"] = query.value("describe").toString();
+            int avatarId = query.value("avatar").toInt();
+            //获取头像信息
+            QSqlQuery nquery;
+            nquery.exec(QString("SELECT * FROM avatars WHERE id = %1").arg(avatarId)); //在一个查询内部再一个查询不知道可不可以。。。
+            if(nquery.next()){
+                QString path = nquery.value("spath").toString();
+                QPixmap avatar(QDir(path).absolutePath());
+                obj["avatarData"] = QVariant(avatar).toJsonValue(); //这中间是否经过几重转换...
+                obj["format"] = path.split(".").last();
+            }
+
+            nquery.exec(QString("SELECT * FROM contacts WHERE user1 = %1 and user2 = %2")
+                        .arg(id).arg(idx));
+            if(nquery.next()){
+                obj["iscontact"] = 1;
+            }
+            users.push_back(obj);
+        }
+    }else if (json.contains("name") && json["name"].isString()) {
+        name = json["name"].toString();
+        query.exec(QString("SELECT * FROM users WHERE name LIKE '%1'").arg(tr("%") + name + "%"));
+        while (query.next()) {
+            QJsonObject obj;
+            int idx = query.value("id").toInt();
+            obj["name"] = query.value("name").toString();
+            obj["account"] = query.value("account").toString();
+            obj["isgroup"] = query.value("isgroup").toInt();
+            obj["describe"] = query.value("describe").toString();
+            int avatarId = query.value("avatar").toInt();
+            //获取头像信息
+            QSqlQuery nquery;
+            nquery.exec(QString("SELECT * FROM avatars WHERE id = %1").arg(avatarId)); //在一个查询内部再一个查询不知道可不可以。。。
+            if(nquery.next()){
+                QString path = nquery.value("spath").toString();
+                QPixmap avatar(QDir(path).absolutePath());
+                obj["avatarData"] = QVariant(avatar).toJsonValue(); //这中间是否经过几重转换...
+                obj["format"] = path.split(".").last();
+            }
+            //这一步可检查该用户是否为群组
+            nquery.exec(QString("SELECT * FROM contacts WHERE user1 = %1 and user2 = %2")
+                        .arg(id).arg(idx));
+            if(nquery.next()){
+                obj["iscontact"] = 1;
+            }
+            users.push_back(obj);
+        }
+    }
+    generateResponse("search", "success", "", "", "", "", QVariant(users)); //QVariant多层嵌套可还行
 }

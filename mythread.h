@@ -28,12 +28,13 @@ private:
     void dealLogin(QJsonObject &json, MySocket *socket);
     void dealSearch(QJsonObject &json, MySocket *socket);
     void dealSend(QJsonObject &json, MySocket *socket);
+    void dealAddFriend(QJsonObject &json, MySocket *socket);
     QString encrypt(QString password); //密码加密
     QByteArray generateResponse(QString action, QString response, QString type = "",
                                 QString sender = "", QString receiver = "",
-                                QByteArray *content = nullptr, QString format = "");
+                                QString format = "", QVariant content = QVariant()); //最后要传输的数据内容，还没想好格式
     QString generateToken(int id);
-
+    int decodeToken(QString token);
     QList<MySocket *> m_sockets;
 };
 
