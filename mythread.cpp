@@ -8,6 +8,7 @@
 #include <QDir>
 #include <QRandomGenerator>
 #include <QSqlQuery>
+#include <QException>
 
 MyThread::MyThread(QObject *parent):
     QThread(parent)
@@ -17,7 +18,15 @@ MyThread::MyThread(QObject *parent):
 
 MyThread::~MyThread()
 {
-
+    // remove all the sockets;
+    for(auto socket : m_sockets)
+    {
+        socket->disconnectFromHost();
+        delete socket;
+    }
+    this->wait();
+    this->quit();
+    this->deleteLater();
 }
 
 // 【注意：处理套接字的任何时候，套接字都有可能从客户端关闭】
@@ -42,7 +51,6 @@ void MyThread::run()
             }
             handleRequest(bytes, t_socket);
             m_sockets.push_back(t_socket); //处理完请求后将套接字加入队尾
-            return;
         }
     }
 }
@@ -62,8 +70,16 @@ void MyThread::addSocket(qintptr socketDescriptor)
         return;
     }
     m_sockets.push_front(socket);
+    connect(socket, &QTcpSocket::bytesAvailable, this, &MyThread::prepareHandle);
     connect(socket, SIGNAL(disconnected()),
             this, SLOT(removeSocket(socket)));
+}
+
+void MyThread::prepareHandle()
+{
+    if (!isRunning()){
+        start();
+    }
 }
 
 // 【线程什么时候会使用这个槽】
@@ -79,31 +95,34 @@ void MyThread::removeSocket(MySocket *socket)
 void MyThread::handleRequest(QByteArray &data, MySocket *socket)
 {
     QJsonDocument doc(QJsonDocument::fromJson(data));
-    QJsonObject json = doc.object();
+    QJsonObject json = doc.object(), response;
     if(json.contains("action") && json["action"].isString())
     {
         QString action = json["action"].toString();
         if(action == "register"){ //注册
-            dealRegister(json, socket);
+            response = dealRegister(json);
         }else if(action == "login"){ //登录
-            dealLogin(json, socket);
+            response = dealLogin(json);
         }else if(action == "lookup"){ //查找
-            dealSearch(json, socket);
+            response = dealSearch(json);
         }else if(action == "sendMsg"){
-            dealSend(json, socket); //发送消息
+            response = dealSend(json); //发送消息
         }else if(action == "addFriend"){
-            dealAddFriend(json, socket);  //添加好友
+            response = dealAddFriend(json);  //添加好友
         }
     }
+    QJsonDocument saveDoc(response);
+    socket->write(saveDoc.toBinaryData());
 }
 
 // 【处理用户注册】
-void MyThread::dealRegister(QJsonObject &json, MySocket *socket)
+QJsonObject MyThread::dealRegister(QJsonObject &json)
 {
     QSqlQuery query;
     QString name = json["name"].toString();
-    QString rawPassword = json["password"].toString();
-    QString password = encrypt(rawPassword);
+    //QString rawPassword = json["password"].toString(); //应该客户端加密
+    //QString password = encrypt(rawPassword);
+    QString password = json["password"].toString();
     QString account = QDateTime::currentSecsSinceEpoch() + tr("") + rand()%100; //随机生成账号
     QString sql = QString("INSERT INTO users (account, password, name) VALUES ('%1', '%2', '%3')")
                .arg(account).arg(password).arg(name);
@@ -140,15 +159,16 @@ void MyThread::dealRegister(QJsonObject &json, MySocket *socket)
         }
     }
     query.exec(sql);  //[3]
-    generateResponse("register", "success"); //处理响应信息，可以作为返回值
+    return generateResponse("register", "success"); //处理响应信息，可以作为返回值
 }
 // 【处理用户注册】
 
-void MyThread::dealLogin(QJsonObject &json, MySocket *socket)
+QJsonObject MyThread::dealLogin(QJsonObject &json)
 {
     QString account = json["account"].toString();
-    QString rawPassword = json["password"].toString();
-    QString password = encrypt(rawPassword); //经过某种加密后
+    //QString rawPassword = json["password"].toString();
+    //QString password = encrypt(rawPassword); //经过某种加密后
+    QString password = json["password"].toString();
     QSqlQuery query;
     QString response = "fail";
     QString authur = "";
@@ -162,12 +182,13 @@ void MyThread::dealLogin(QJsonObject &json, MySocket *socket)
         token = generateToken(id);
         response = "success";
     }
-    generateResponse("login", response, token, authur); //type字段在不是传输消息时，可以存放一些简短的响应消息
+    return generateResponse("login", response, token, authur); //type字段在不是传输消息时，可以存放一些简短的响应消息
 }
 
-void MyThread::dealSearch(QJsonObject &json, MySocket *socket)
+QJsonObject MyThread::dealSearch(QJsonObject &json)
 {
-    int id = decodeToken(json["token"].toString());
+    //不安全
+    int id = decodeToken(json["token"].toString(), json["sender"].toString());
     QString account;
     QString name;
     QSqlQuery query;
@@ -230,5 +251,85 @@ void MyThread::dealSearch(QJsonObject &json, MySocket *socket)
             users.push_back(obj);
         }
     }
-    generateResponse("search", "success", "", "", "", "", QVariant(users)); //QVariant多层嵌套可还行
+    return generateResponse("search", "success", "", "", "", "", QVariant(users)); //QVariant多层嵌套可还行
+}
+
+// 【暂时跳过】
+QJsonObject MyThread::dealSend(QJsonObject &json)
+{
+    QString authur = json["sender"].toString();
+    int authur_id = decodeToken(json["token"].toString(), authur);
+    QString receiver = json["receiver"].toString();
+
+}
+// 【暂时跳过】
+
+QJsonObject MyThread::dealAddFriend(QJsonObject &json)
+{
+
+    //简单点，直接成为联系人，不搞确认＆确认了
+    QSqlQuery query;
+    QString sql1, sql2;
+    QString response = "fail";
+    QString receiver;
+    QString account;
+    try {
+        account = json["sender"].toString();
+        int id;
+        if(id = decodeToken(json["token"].toString(), account))
+        {
+            receiver = json["receiver"].toString();
+            query.exec(QString("SELECT * FROM USERS WHERE account = '%1'").arg(receiver));
+            if(query.next()){
+                int fri_id = query.value("id").toInt();
+                sql1 = QString("INSERT INTO contacts (user1, user2) VALUES(%1, %2)").arg(id, fri_id);
+                sql2 = QString("INSERT INTO contacts (user1, user2) VALUES(%1, %2)").arg(fri_id, id);
+            }
+            query.exec(sql1);
+            query.exec(sql2);
+            response = "success";
+        }
+    } catch (QException e) {
+        //emit error()
+    }
+    return generateResponse("addFriend", response, "", account, receiver);
+}
+
+QJsonObject MyThread::generateResponse(QString action, QString response, QString type,
+                                      QString sender, QString receiver, QString format, QVariant content)
+{
+    QJsonObject json;
+    json["action"] = action;
+    json["response"] = response;
+    json["type"] = type;
+    json["sender"] = sender;
+    json["receiver"] = receiver;
+    json["format"] = format;
+    json["content"] = content.toJsonValue();
+    return json;
+}
+
+QString MyThread::generateToken(int id){
+    QString server = "chat";
+    return server+id;
+}
+
+int MyThread::decodeToken(QString token, QString sender)
+{
+    QSqlQuery query;
+    QString tmp;
+    for(int i = 4; i < token.size(); i++)
+    {
+        tmp += token[i];
+    }
+    int t = tmp.toInt();
+    query.exec(QString("SELECT * FROM users WHERE account = '%1'").arg(sender));
+    if(query.next())
+    {
+        int id = query.value("id").toInt();
+        if(id == t){
+            return t;
+        }
+    }
+    return 0;
 }
