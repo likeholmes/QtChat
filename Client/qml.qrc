@@ -2,5 +2,7 @@
     <qresource prefix="/">
         <file>main.qml</file>
         <file>qtquickcontrols2.conf</file>
+        <file>MessagePage.qml</file>
+        <file>IndexPage.qml</file>
     </qresource>
 </RCC>
