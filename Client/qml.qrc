@@ -4,5 +4,7 @@
         <file>qtquickcontrols2.conf</file>
         <file>MessagePage.qml</file>
         <file>IndexPage.qml</file>
+        <file>LoginPage.qml</file>
+        <file>RegisterPage.qml</file>
     </qresource>
 </RCC>

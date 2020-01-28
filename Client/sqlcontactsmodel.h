@@ -13,7 +13,9 @@ public:
 
     QVariant data(const QModelIndex &idx, int role = Qt::DisplayRole) const override;
 
-    //Q_INVOKABLE void addFriend(const QString &account);
+    Q_INVOKABLE void addFriend(const QString &account, const QString &name,
+                               const QString &avatar, const int isgroup, const QString &describe);
+
 };
 
 #endif // SQLCONTACTSMODEL_H

@@ -9,6 +9,7 @@ Page{
     //anchors.fill: parent
     property string conversionWithName
     property string conversionWithAccount
+    property string avatarPath
     property string user
     header: ToolBar{
         id: toolBoor
@@ -16,7 +17,7 @@ Page{
             highlighted: true
             font.pixelSize: 11
             text: qsTr("Back")
-            onClicked: stackView.pop()
+            onClicked: messagePage.StackView.view.pop()
         }
         Text {
             font.pixelSize: 24
@@ -34,13 +35,51 @@ Page{
             model: SqlConversationModel{
                 recipient: conversionWithAccount
             }
+            //model: 50
             Layout.fillHeight: true
             Layout.fillWidth: true
-            spacing: 30
-            delegate: Rectangle {
-                id: message
-                Text {
-                    text: model.content
+            Layout.margins: rowPane.leftPadding
+
+            spacing: 15
+
+            delegate: Column {
+                id: itemColumn
+                property bool sentByMe: model.sender !== conversionWithAccount
+                anchors.right: sentByMe ? parent.right : undefined
+                Row {
+                    id: itemRow
+                    anchors.right: sentByMe ? parent.right : undefined
+                    spacing: 10
+
+                    Image {
+                        width: 40
+                        height: 40
+                        source: "file:/"+avatarPath
+                        visible: !sentByMe
+                    }
+                    Rectangle {
+                         width: 160
+                         height: 40
+                         color: sentByMe ? "lightgrey" : "steelblue"
+                         radius: 4
+                         visible: model.type === "text"
+                         //图片就之后再想怎么弄
+
+                         Label {
+                             text: model.content
+                             color: sentByMe ? "black" : "white"
+                             anchors.fill: parent
+                             anchors.margins: 10
+                         }
+                    }
+
+                }
+
+                Label {
+                    font.pixelSize: 11
+                    text: Qt.formatDateTime(model.time, "MMMd hh:mm")
+                    color: "grey"
+                    anchors.right: sentByMe ? undefined : parent.right
                 }
             }
 
@@ -70,9 +109,9 @@ Page{
                             显示文件应在对话框中进行
                         */
                         //uploadFile(fileUrl)
-                        isPicture = fileUrl.search("png") > 0 || fileUrl.search("jpg") > 0;
+                        isPicture = fileUrl.toString().indexOf("png") > 0 || fileUrl.toString().indexOf("jpg") > 0;
                         type = isPicture ? "picture" : "file";
-                        messagelist.sendMessage(type, fileUrl, user, conversionWithAccount);
+                        messagelist.model.sendMessage(type, fileUrl, user, conversionWithAccount);
                     }
                 }
 

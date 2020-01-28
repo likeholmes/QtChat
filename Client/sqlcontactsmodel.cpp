@@ -32,8 +32,9 @@ SqlContactsModel::SqlContactsModel(QObject *parent):
 {
     createTable();
     setTable(contactsTableName);
-    //setSort(2, Qt::DescendingOrder);
+    setEditStrategy(QSqlTableModel::OnManualSubmit);
     select();
+
 }
 
 QHash<int, QByteArray> SqlContactsModel::roleNames() const
@@ -56,4 +57,22 @@ QVariant SqlContactsModel::data(const QModelIndex &idx, int role) const
     const QSqlRecord sqlRecord = record(idx.row());
     //qDebug()<< sqlRecord.value(role - Qt::UserRole);
     return sqlRecord.value(role - Qt::UserRole);
+}
+
+void SqlContactsModel::addFriend(const QString &account, const QString &name,
+                                 const QString &avatar, const int isgroup, const QString &describe)
+{
+    QSqlRecord newRecord = record();
+    newRecord.setValue("account", account);
+    newRecord.setValue("name", name);
+    newRecord.setValue("avatar", avatar);
+    newRecord.setValue("isgroup", isgroup);
+    newRecord.setValue("describe", describe);
+
+    if(!insertRecord(rowCount(), newRecord)){
+        qWarning() << "Failed to send message:" << lastError().text();
+        return;
+    }
+
+    submitAll();
 }

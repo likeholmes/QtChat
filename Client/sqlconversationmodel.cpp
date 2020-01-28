@@ -9,12 +9,12 @@
 static const char * conversationTableName = "conversation";
 static void createTable()
 {
-    /*if(QSqlDatabase::database().tables().contains(conversationTableName)){
+    if(QSqlDatabase::database().tables().contains(conversationTableName)){
         return;
-    }*/
-
+    }
+    qDebug()<< "重新建表";
     QSqlQuery query;
-    query.exec("DROP TABLE IF EXISTS 'conversation'");
+    //query.exec("DROP TABLE IF EXISTS 'conversation'");
     if (!query.exec("CREATE TABLE 'conversation' ("
                     "'id' INTEGER PRIMARY KEY AUTOINCREMENT,"
                     "'type' TEXT NOT NULL,"
@@ -28,9 +28,10 @@ static void createTable()
         qFatal("Failed to query database: %s", qPrintable(query.lastError().text()));
     }
 
-    query.exec("INSERT INTO contacts (type, content, sender, receiver, time)"
-               "VALUES('text', 'hello', 'me', '1037', '2020-01-07T14:36:06')");
-    query.exec("INSERT INTO contacts (type, content, sender, receiver, time)"
+    if(!query.exec("INSERT INTO conversation (type, content, sender, receiver, time)"
+               "VALUES('text', 'hello', 'me', '1037', '2020-01-07T14:36:06')"))
+        qFatal("a Failed to query database: %s", qPrintable(query.lastError().text()));
+    query.exec("INSERT INTO conversation (type, content, sender, receiver, time)"
                "VALUES('text', 'hi', '1037', 'me', '2020-01-07T14:36:06')");
 }
 
@@ -39,7 +40,7 @@ SqlConversationModel::SqlConversationModel(QObject * parent):
 {
     createTable();
     setTable(conversationTableName);
-    setSort(5, Qt::DescendingOrder);
+    //setSort(5, Qt::DescendingOrder);
     setEditStrategy(QSqlTableModel::OnManualSubmit);
 }
 
@@ -55,28 +56,40 @@ void SqlConversationModel::setRecipient(const QString &recipient)
 
     m_recipient = recipient;
     //目前只适用于非群聊
-    QString filter = QString("sender='%1' OR receiver='%1'").arg(recipient);
-    setFilter(filter);
+    const QString filterString = QString("sender='%1' OR receiver='%1'").arg(recipient);
+
+    setFilter(filterString);
+
     select();
 
+    //qDebug()<<"this is "<<record(0).value("content");
     emit recipientChanged();
 }
 
 QHash<int, QByteArray> SqlConversationModel::roleNames() const
 {
     QHash<int, QByteArray> names;
-    for (int i = 0; i < record().count(); i++){
+    /*for (int i = 0; i < record().count(); i++){
         names[Qt::UserRole + i] = record().fieldName(i).toUtf8();
-    }
+    }*/
+
+    names[Qt::UserRole] = "id";
+    names[Qt::UserRole + 1] = "type";
+    names[Qt::UserRole + 2] = "content";
+    names[Qt::UserRole + 3] = "sender";
+    names[Qt::UserRole + 4] = "receiver";
+    names[Qt::UserRole + 5] = "time";
     return names;
 }
 
 QVariant SqlConversationModel::data(const QModelIndex &idx, int role) const
 {
-    if(!idx.isValid())
+
+    if(role < Qt::UserRole)
         return QSqlTableModel::data(idx, role);
 
     const QSqlRecord result = record(idx.row());
+
     return result.value(role - Qt::UserRole);
 }
 

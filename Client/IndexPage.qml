@@ -5,10 +5,14 @@ import io.qtchat.model 1.0
 
 Page {
     id: indexPage
-    //anchors.fill: parent
+    anchors.fill: parent
+    property bool readySearch : searchInput.length > 0
+    property string userName
+    property string userAccount
+    property string userAvatar
 
     header: Rectangle {
-        height: 160
+        height: 140
         color: "orange"
         Row {
             width: parent.width
@@ -19,11 +23,13 @@ Page {
                 id: avatar
                 width: 60
                 height: 60
+                //source: userAvatar
                 source: "file:D://QtProject/chatAll/Client/image/avatar01.jpg"
             }
             Label {
                 leftPadding: 15
                 text: "昵称"
+                //text: userName
             }
         }
 
@@ -31,28 +37,91 @@ Page {
             width: parent.width
             height: 30
             topPadding: 90
+            spacing: 8
+            leftPadding: 5
 
-            Label {
-                leftPadding: 5
-                text: qsTr("搜索:")
+            TextField {
+                id: searchInput
+                maximumLength: 20
+                placeholderText: "search"
             }
 
-            TextInput {
-                id: search
-                maximumLength: 25
-                bottomPadding: 10
-                font.pointSize: 14
-                cursorVisible: true
-                text: "search"
+            Button {
+                id: searchButton
+                text: "搜索"
+                enabled: searchInput.length > 0
+                onClicked:accounts.model = 20
             }
 
         }
 
+    }
+
+    ListView{
+        id: accounts
+        //model: 20
+        anchors.fill: parent
+        anchors.leftMargin: 1
+        anchors.rightMargin: 1
+        visible: readySearch
+        delegate:  Rectangle {
+            id: contact
+            height: 60
+            width: parent.width
+            color: "lightblue"
+            border.color: "white"
+            ItemDelegate{
+                width: parent.width
+                height: parent.height
+
+                Row {
+                    height: parent.height
+                    width: parent.width
+                    spacing: 10
+                    Image {
+                        id: contact_avatar
+                        height: parent.height
+                        width: parent.height
+                        //source: model.avatar
+                        source: "file:D://QtProject/chatAll/Client/image/avatar01.jpg"
+                    }
+
+                    Label {
+                        id: contact_account
+                        //text: model.name
+                        text: index
+                    }
+                }
+                onClicked: dialog.open()
+
+                Dialog {
+                    id: dialog
+                    //title: ""
+                    //头像
+                    //昵称
+                    //签名
+
+                    Button {
+                        id: add
+                        text: "添加"
+                        //onClicked: model.addFriend()
+                    }
+                }
+            }
+
+        }
+        ScrollBar.vertical: ScrollBar{}
+    }
+
+    ColumnLayout {
+        anchors.fill: parent
+        visible: !readySearch
+
         TabBar {
             id: tabs
-            width: parent.width
+            Layout.fillWidth: true
+
             height: 40
-            anchors.bottom: parent.bottom
             TabButton{
                 text: "消息"
              }
@@ -60,30 +129,24 @@ Page {
                 text: "联系人"
             }
         }
-    }
 
-    StackLayout {
-        id: stackLayout
-        width: parent.width
-        anchors.fill: parent
-        currentIndex: tabs.currentIndex
+        StackLayout {
+            id: stackLayout
 
-        ScrollView {
-            id: messagesScroll
+            currentIndex: tabs.currentIndex
+
             ListView {
                 id: messageslist
                 model: 20
                 delegate: ItemDelegate {
-                    text: "Item" + (index + 1)
+                    text: index
                     width: parent.width
                     height: 60
                 }
-            }
-        }
 
-        ScrollView {
-            id: contactsScroll
-            //anchors.fill: parent
+                ScrollBar.vertical: ScrollBar{}
+            }
+
             ListView {
                 id: contact_list
                 model: SqlContactsModel{}
@@ -95,7 +158,7 @@ Page {
 
                         Image {
                             id: contactAvatar
-                            source: "file:"+model.avatar
+                            source: "file:"+model.avatar;
                             width: 60
                             height: 60
                         }
@@ -107,12 +170,14 @@ Page {
                     }
 
                     onClicked: {
-                        stackView.push("qrc:/MessagePage.qml", { conversionWithName: model.name,
-                                           conversionWithAccount: model.account});
+                        indexPage.StackView.view.push("qrc:/MessagePage.qml", { conversionWithName: model.name,
+                                           conversionWithAccount: model.account, user: "laozi", //user: userAccount,
+                                                      avatarPath: model.avatar});
 
                     }
                 }
             }
+
         }
     }
 }
