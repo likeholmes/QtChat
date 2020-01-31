@@ -100,6 +100,7 @@ Page {
             id: okButton
             text: "确认"
             onClicked: {//将数据传到后台，通过套接字发送到服务器，进行注册
+                //线程等待服务器响应，若注册失败则弹窗，需要account,否则stackView.push()
             }
         }
     }

@@ -96,16 +96,16 @@ Page {
 
                 Dialog {
                     id: dialog
-                    //title: ""
+                    title: "是否添加该用户为好友"
                     //头像
                     //昵称
                     //签名
+                    standardButtons: Dialog.Ok | Dialog.Cancel
 
-                    Button {
-                        id: add
-                        text: "添加"
-                        //onClicked: model.addFriend()
-                    }
+                    //头像需要存储到本地，获取一个本地地址
+                    /*onAccepted: parent.model.addFriend(model.account, model.name,
+                                                       model.avatar, model.isgroup, model.describe)
+                                                       */
                 }
             }
 
