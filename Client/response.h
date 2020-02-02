@@ -2,33 +2,45 @@
 #define RESPONSE_H
 
 #include "message.h"
+#include "user.h"
 
-#include <QObject>
-
-class Response: public Message
+class Response: public QObject
 {
     Q_OBJECT
 public:
 
     enum State {
-        SUCCESS, FAILURE
+        FAILURE, SUCCESS
+    };
+
+    enum Action{
+      Login, Register, Search, Add, Send, Receive, Download
     };
 
     Response(QObject *parent);
 
     Response(const QByteArray &bytes);
 
-    QString response() const;
-    void setResponse(const QString &response);
-
-    QString name() const;
-    void setName(const QString &name);
-
-    QString describe() const;
-    void setDescribe(const QString &describe);
+    State response() const;
+    void setResponse(State response);
 
     QString token() const;
     void setToken(const QString &token);
+
+    Action action() const;
+    void setAction(Action action);
+
+    User authur() const;
+    void setAuthur(const User &authur);
+
+    QByteArray content() const;
+    void setContent(const QByteArray &content);
+
+    QList<User*> searchResult() const;
+
+    Message msgContent() const;
+
+    QJsonObject toJsonObject() const;
 
 private:
     QJsonObject m_json;

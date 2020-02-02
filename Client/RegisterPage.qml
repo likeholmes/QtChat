@@ -2,6 +2,7 @@ import QtQuick 2.9
 import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.3
 import QtQuick.Dialogs 1.0
+import io.qtchat.mytype 1.0
 
 Page {
     id: root
@@ -35,6 +36,7 @@ Page {
         Label {
             id: passwordMoreLabel
             text: "确认密码"
+            //保证确认密码与密码一致
         }
 
         TextField {
@@ -66,7 +68,7 @@ Page {
                 id: fileDialog
 
                 title: qsTr("选择一个文件")
-                selectedNameFilter: "Image files (*.png *.jpg)"
+                selectedNameFilter: qsTr("Image files (*.png *.jpg)")
                 nameFilters: [ "Image files (*.png *.jpg)", "All files (*)" ]
 
                 onAccepted: {
@@ -99,8 +101,23 @@ Page {
             Layout.columnSpan: 2
             id: okButton
             text: "确认"
+
+            User {
+                id: user
+                name: nameInput.text
+                password: passwordInput.text
+                describe: describeInput.text
+                avatarPath: fileDialog.fileUrl.toLocalFile()
+            }
+
+            Connections {
+                target: client
+                onRegisterSuccess: root.StackView.view.push("qrc:/IndexPage.qml", {user: user})
+            }
+
             onClicked: {//将数据传到后台，通过套接字发送到服务器，进行注册
                 //线程等待服务器响应，若注册失败则弹窗，需要account,否则stackView.push()
+                client.dealRegister(user)
             }
         }
     }

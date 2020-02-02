@@ -1,5 +1,6 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
+#include <QQmlContext>
 #include <QSqlDatabase>
 #include <QSqlError>
 #include <QStandardPaths>
@@ -7,7 +8,8 @@
 
 #include "sqlcontactsmodel.h"
 #include "sqlconversationmodel.h"
-
+#include "client.h"
+#include "message.h"
 static void connectToDatabase()
 {
     QSqlDatabase database = QSqlDatabase::database();
@@ -41,11 +43,14 @@ int main(int argc, char *argv[])
 
     qmlRegisterType<SqlContactsModel>("io.qtchat.model", 1, 0, "SqlContactsModel");
     qmlRegisterType<SqlConversationModel>("io.qtchat.model", 1, 0, "SqlConversationModel");
+    qmlRegisterType<Message>("io.qtchat.mytype", 1, 0, "Message");
+    qmlRegisterType<User>("io.qtchat.mytype", 1, 0, "User");
 
     connectToDatabase();
-
+    Client client;
     QQmlApplicationEngine engine;
     const QUrl url(QStringLiteral("qrc:/main.qml"));
+    engine.rootContext()->setContextProperty("client", &client);
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
                      &app, [url](QObject *obj, const QUrl &objUrl) {
         if (!obj && url == objUrl)

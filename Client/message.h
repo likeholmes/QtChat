@@ -7,33 +7,115 @@
 class Message : public QObject
 {
     Q_OBJECT
+
+    Q_PROPERTY(Type type READ type WRITE setType)
+
+    Q_PROPERTY(QString filePath READ filePath WRITE setFilePath)
+
+    Q_PROPERTY(QString authur READ authur WRITE setAuthur)
+
+    Q_PROPERTY(QString recipient READ recipient WRITE setRecipient)
+
+    Q_PROPERTY(QString fileIndex READ fileIndex WRITE setFileIndex)
+
+    Q_PROPERTY(QString fileName READ fileName WRITE setFileName)
+
+    Q_PROPERTY(QString fileSize READ fileSze WRITE setFileSize)
+
+    Q_PROPERTY(QString textMsg READ textMsg WRITE setTextMsg)
+
 public:
+
     explicit Message(QObject *parent = nullptr);
-    Message(const QByteArray &json);
 
-    QString action() const;
-    void setAction(const QString &action);
+    Message(const QJsonObject &json);
 
-    QString type() const;
-    void setType(const QString &type);
+    Message(const QString &msg){
+        m_textMsg = msg;
+        m_type = Text;
+    }
 
-    QString authur() const;
-    void setAuthur(const QString &authur);
+    Message(const Message &msg);
 
-    QByteArray content() const;
-    void setContent(const QByteArray &content);
+    Message& operator= (const Message &msg);
 
-    QString recipiant() const;
-    void setRecipient(const QString &recipient);
+    enum Type{
+        Text, Picture, File
+    };
 
-    QJsonObject message() const;
+    Q_ENUM(Type)
 
-    virtual QByteArray toByteArray() const;
+    Type type() const{
+        return m_type;
+    }
+
+    void setType(Type type){
+        m_type = type;
+    }
+
+    QString textMsg() const{
+        return m_textMsg;
+    }
+
+    qint64 fileSize() const{
+        return m_filesize;
+    }
+    void setFileSize(qint64 size){
+        m_filesize = size;
+    }
+
+    QString fileName() const{
+        return m_fileName;
+    }
+    void setFileName(const QString& fileName){
+        m_fileName = fileName;
+    }
+
+    QString filePath() const{
+        return m_filePath;
+    }
+
+    void setFilePath(const QString& filePath){
+        m_filePath = filePath;
+    }
+
+    int fileIndex() const{
+        return m_fileIndex;
+    }
+
+    void setFileIndex(int fileIndex){
+        m_fileIndex = fileIndex;
+    }
+
+    QString authur() const{
+        return m_authur;
+    }
+    void setAuthur(const QString & authur){
+        m_authur = authur;
+    }
+
+    QString recipient() const{
+        return m_recipient;
+    }
+    void setRecipient(const QString &recipient){
+        m_recipient = recipient;
+    }
+
+    void dealFile();
+
+    QJsonObject toJsonObject() const;
 
 signals:
 
 private:
-    QJsonObject m_json;
+    QString m_textMsg;
+    Type m_type;
+    qint64 m_filesize;
+    QString m_fileName;
+    QString m_filePath;
+    int m_fileIndex;
+    QString m_authur;
+    QString m_recipient;
 };
 
 #endif // MESSAGE_H

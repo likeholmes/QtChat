@@ -2,11 +2,16 @@
 #define REQUEST_H
 
 #include "message.h"
+#include "user.h"
 
-class Request: public Message
+class Request: public QObject
 {
     Q_OBJECT
 public:
+    enum Action{
+      Login, Register, Search, Add, Send, Receive, Download
+    };
+
     Request(QObject * parent = nullptr);
 
     Request(const QByteArray& bytes);
@@ -14,19 +19,27 @@ public:
     QString token() const;
     void setToken(const QString &token);
 
-    QString format() const;
-    void setFormat(const QString &format);
+    Action action() const;
+    void setAction(Action action);
 
-    QString password() const;
-    void setPassword(const QString &password);
+    User authur() const;
+    void setAuthur(const User &authur);
 
-    QString name() const;
-    void setName(const QString &name);
+    Message msgContent() const;
+    void setMsgContent(const Message &content);
 
-    QString describe() const;
-    void setDescribe(const QString &describe);
+    qint64 downloadIndex() const;
+    void setDownloadIndex(int index);
 
-    QByteArray toByteArray() const override;
+    QString searchContent() const;
+    void setSearchContent(const QString& searchContent);
+
+    QString addContent() const;
+    void setAddContent(const QString & addContent);
+
+    QJsonObject toJsonObject() const;
+
+    QByteArray toByteArray() const;
 
 private:
     QJsonObject m_json;

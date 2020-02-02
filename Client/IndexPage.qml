@@ -2,14 +2,23 @@ import QtQuick 2.9
 import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.3
 import io.qtchat.model 1.0
+import io.qtchat.mytype 1.0
 
 Page {
     id: indexPage
     anchors.fill: parent
+
     property bool readySearch : searchInput.length > 0
-    property string userName
-    property string userAccount
-    property string userAvatar
+    property User user
+
+    Connections {
+        target: client
+        onMsgReceived: {
+            msg = client.message;
+            //如何让全局都访问一个局部对象，并且在任何地方都可以接收【接收消息】信号
+            messagelist.model.sendMessage(msg.type, msg.textMsg, msg.authur, msg.recipient)
+        }
+    }
 
     header: Rectangle {
         height: 140
@@ -23,13 +32,11 @@ Page {
                 id: avatar
                 width: 60
                 height: 60
-                //source: userAvatar
-                source: "file:D://QtProject/chatAll/Client/image/avatar01.jpg"
+                source: user.avatarPath
             }
             Label {
                 leftPadding: 15
-                text: "昵称"
-                //text: userName
+                text: "昵称" + user.name
             }
         }
 
@@ -46,11 +53,18 @@ Page {
                 placeholderText: "search"
             }
 
+            Connections{
+                target: client
+                onSearchSuccess: accounts.model = client.searchContent
+            }
+
             Button {
                 id: searchButton
                 text: "搜索"
                 enabled: searchInput.length > 0
-                onClicked:accounts.model = 20
+                onClicked:{
+                    client.dealSearch(searchInput.text)
+                }
             }
 
         }
@@ -59,7 +73,6 @@ Page {
 
     ListView{
         id: accounts
-        //model: 20
         anchors.fill: parent
         anchors.leftMargin: 1
         anchors.rightMargin: 1
@@ -82,31 +95,34 @@ Page {
                         id: contact_avatar
                         height: parent.height
                         width: parent.height
-                        //source: model.avatar
-                        source: "file:D://QtProject/chatAll/Client/image/avatar01.jpg"
+                        source: model.avatarPath
                     }
 
                     Label {
                         id: contact_account
-                        //text: model.name
-                        text: index
+                        text: model.name
                     }
                 }
                 onClicked: dialog.open()
 
+                //待改
+                Connections{
+                    target: client
+                    onAddSuccess: contact_list.model.addFriend(model);//更新联系人信息
+                }
+                //待改
+
                 Dialog {
                     id: dialog
                     title: "是否添加该用户为好友"
-                    //头像
-                    //昵称
-                    //签名
                     standardButtons: Dialog.Ok | Dialog.Cancel
 
-                    //头像需要存储到本地，获取一个本地地址
-                    /*onAccepted: parent.model.addFriend(model.account, model.name,
-                                                       model.avatar, model.isgroup, model.describe)
-                                                       */
+                    onAccepted: {
+                        client.dealAddFriend(model.account);
+                    }
+
                 }
+
             }
 
         }
@@ -158,7 +174,7 @@ Page {
 
                         Image {
                             id: contactAvatar
-                            source: "file:"+model.avatar;
+                            source: "file:"+model.avatar
                             width: 60
                             height: 60
                         }
@@ -170,10 +186,8 @@ Page {
                     }
 
                     onClicked: {
-                        indexPage.StackView.view.push("qrc:/MessagePage.qml", { conversionWithName: model.name,
-                                           conversionWithAccount: model.account, user: "laozi", //user: userAccount,
-                                                      avatarPath: model.avatar});
-
+                        indexPage.StackView.view.push(
+                                    "qrc:/MessagePage.qml", { conversionWith: model, user: user});
                     }
                 }
             }

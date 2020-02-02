@@ -2,6 +2,7 @@
 #define SQLCONTACTSMODEL_H
 
 #include <QSqlTableModel>
+#include "user.h"
 
 class SqlContactsModel: public QSqlTableModel
 {
@@ -13,8 +14,7 @@ public:
 
     QVariant data(const QModelIndex &idx, int role = Qt::DisplayRole) const override;
 
-    Q_INVOKABLE void addFriend(const QString &account, const QString &name,
-                               const QString &avatar, const int isgroup, const QString &describe);
+    Q_INVOKABLE void addFriend(const User &user);
 
 };
 

@@ -3,14 +3,13 @@ import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.3
 import QtQuick.Dialogs 1.0
 import io.qtchat.model 1.0
+import io.qtchat.mytype 1.0
 
 Page{
     id: messagePage
     //anchors.fill: parent
-    property string conversionWithName
-    property string conversionWithAccount
-    property string avatarPath
-    property string user
+    property User conversionWith
+    property User user
     header: ToolBar{
         id: toolBoor
         Button {
@@ -22,7 +21,7 @@ Page{
         Text {
             font.pixelSize: 24
             anchors.centerIn: parent
-            text: conversionWithName
+            text: conversionWith.name
         }
     }
 
@@ -33,9 +32,8 @@ Page{
         ListView {
             id: messagelist
             model: SqlConversationModel{
-                recipient: conversionWithAccount
+                recipient: conversionWith.account
             }
-            //model: 50
             Layout.fillHeight: true
             Layout.fillWidth: true
             Layout.margins: rowPane.leftPadding
@@ -44,7 +42,7 @@ Page{
 
             delegate: Column {
                 id: itemColumn
-                property bool sentByMe: model.sender !== conversionWithAccount
+                property bool sentByMe: model.sender !== conversionWith.account
                 anchors.right: sentByMe ? parent.right : undefined
                 Row {
                     id: itemRow
@@ -54,16 +52,50 @@ Page{
                     Image {
                         width: 40
                         height: 40
-                        source: "file:/"+avatarPath
+                        source: "file:/"+conversionWith.avatarPath
                         visible: !sentByMe
                     }
+
+                    Image {
+                        id: img
+                        width: 160
+                        height: 160
+                        visible: model.type !== Message.Text
+                        //这一部分很乱，暂时掠过
+                        Connections {
+                            target: client
+                            onDownloadSuccess: {
+                                model.content = client.downloadPath;
+                                //打开网址对应的文件
+                            }
+                        }
+
+                        Button {
+                            id: downloadButton
+                            width: parent.width
+                            height: parent.height
+                            opacity: 0
+                            onClicked: {
+                                if(model.content.length > 0){
+                                    //打开网址对应的图片
+                                    if(model.type === Message.Picture && model.size < 65535){
+                                        img.source = model.content
+                                    }else{
+                                        img.source = "缩略图"
+                                    }
+                                }else{
+                                    client.dealDownload(model.fileIndex);
+                                }
+                            }
+                        }
+                    }
+
                     Rectangle {
                          width: 160
                          height: 40
                          color: sentByMe ? "lightgrey" : "steelblue"
                          radius: 4
-                         visible: model.type === "text"
-                         //图片就之后再想怎么弄
+                         visible: model.type === Message.Text
 
                          Label {
                              text: model.content
@@ -71,6 +103,7 @@ Page{
                              anchors.fill: parent
                              anchors.margins: 10
                          }
+
                     }
 
                 }
@@ -95,23 +128,31 @@ Page{
 
                 width: parent.width
 
+                Message {
+                    id: msg
+                    authur: user.account
+                    recipient: conversionWith.account
+                }
+
+                Connections {
+                    target: client
+
+                    onSendSuccess: {
+                        messagelist.model.sendMessage(msg)
+                    }
+                }
+
                 FileDialog {
                     property bool isPicture
-                    property string type
                     id: fileDialog
                     title: qsTr("选择一个文件")
                     selectedNameFilter: "All files (*)"
                     nameFilters: [ "Image files (*.png *.jpg)", "All files (*)" ]
                     onAccepted: {
-                        /*
-                            上传文件，将文件链接添加到数据库
-                            判断文件为什么类型，如picture和file
-                            显示文件应在对话框中进行
-                        */
-                        //uploadFile(fileUrl)
                         isPicture = fileUrl.toString().indexOf("png") > 0 || fileUrl.toString().indexOf("jpg") > 0;
-                        type = isPicture ? "picture" : "file";
-                        messagelist.model.sendMessage(type, fileUrl, user, conversionWithAccount);
+                        msg.type = isPicture ? Message.Picture : Message.File;
+                        msg.filePath = fileUrl.toLocalFile();
+                        client.dealSendMsg(msg);
                     }
                 }
 
@@ -134,8 +175,9 @@ Page{
                     text: qsTr("发送")
                     enabled: messageText.length > 0
                     onClicked: {
-                        messagelist.model.sendMessage("text", messageText.text,
-                                                     user, conversionWithAccount);
+                        msg.type = Message.Text
+                        msg.textMsg = messageText.text
+                        client.dealSendMsg(msg)
                         messageText.clear();
                     }
                 }
