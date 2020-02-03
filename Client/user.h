@@ -17,45 +17,68 @@ class User : public QObject
 
     Q_PROPERTY(QString password READ password WRITE setPassword)
 public:
-    explicit User(QObject *parent = nullptr);
-
-    User(const QString &account, const QString &password, const QString &name,
-         const QString &avatar, const QString &describe);
+    explicit User(QObject *parent = nullptr):QObject(parent){}
 
     User(const QJsonObject &json);
-
-    User(const QByteArray &bytes);
 
     User(const User &user);
 
     User& operator= (const User& user);
 
-    QString name() const;
-    void setName(const QString &name);
+    QString name() const{
+        return m_name;
+    }
+    void setName(const QString &name){
+        m_name = name;
+    }
 
-    QString describe() const;
-    void setDescribe(const QString &describe);
+    QString describe() const{
+        return m_describe;
+    }
+    void setDescribe(const QString &describe){
+        m_describe = describe;
+    }
 
-    QString password() const;
-    void setPassword(const QString &password);
+    QString password() const{
+        return m_password;
+    }
+    void setPassword(const QString &password){
+        m_password = password;
+    }
 
-    QString avatarPath() const;
+    QString avatarPath() const{
+        return m_avatarPath;
+    }
     void setAvatarPath(const QString &avatarPath);
 
-    QString account() const;
-    void setAccount(const QString &account);
+    QString account() const{
+        return m_account;
+    }
+    void setAccount(const QString &account){
+        m_account = account;
+    }
 
-    QByteArray avatarData(const QString &data);
-    QByteArray avatarData() const;
-    void setAvatarData(const QByteArray &avatarData);
+    void loadDataFromPath();
 
-    QByteArray toByteArray() const;
+    void saveAvatar();
+
+    QString avatarData() const{
+        return m_avatarData;
+    }
 
     QJsonObject toJsonObject() const;
 
-
 signals:
 
+private:
+    QString getFileName();
+
+    QString m_account;
+    QString m_name;
+    QString m_describe;
+    QString m_password;
+    QString m_avatarPath;
+    QString m_avatarData;
 };
 
 #endif // USER_H

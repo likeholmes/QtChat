@@ -17,7 +17,7 @@ static void createTable()
     //query.exec("DROP TABLE IF EXISTS 'conversation'");
     if (!query.exec("CREATE TABLE 'conversation' ("
                     "'id' INTEGER PRIMARY KEY AUTOINCREMENT,"
-                    "'type' TEXT NOT NULL,"
+                    "'type' INTEGER NOT NULL,"
                     "'content' TEXT NOT NULL,"
                     "'sender' TEXT NOT NULL,"
                     "'receiver' TEXT NOT NULL,"
@@ -28,11 +28,11 @@ static void createTable()
         qFatal("Failed to query database: %s", qPrintable(query.lastError().text()));
     }
 
-    if(!query.exec("INSERT INTO conversation (type, content, sender, receiver, time)"
-               "VALUES('text', 'hello', 'me', '1037', '2020-01-07T14:36:06')"))
-        qFatal("a Failed to query database: %s", qPrintable(query.lastError().text()));
-    query.exec("INSERT INTO conversation (type, content, sender, receiver, time)"
-               "VALUES('text', 'hi', '1037', 'me', '2020-01-07T14:36:06')");
+    //if(!query.exec("INSERT INTO conversation (type, content, sender, receiver, time)"
+      //         "VALUES(1, 'hello', 'me', '1037', '2020-01-07T14:36:06')"))
+        //qFatal("a Failed to query database: %s", qPrintable(query.lastError().text()));
+    //query.exec("INSERT INTO conversation (type, content, sender, receiver, time)"
+      //         "VALUES(1, 'hi', '1037', 'me', '2020-01-07T14:36:06')");
 }
 
 SqlConversationModel::SqlConversationModel(QObject * parent):
@@ -93,7 +93,7 @@ QVariant SqlConversationModel::data(const QModelIndex &idx, int role) const
     return result.value(role - Qt::UserRole);
 }
 
-void SqlConversationModel::sendMessage(const QString &type, const QString &content,
+/*void SqlConversationModel::sendMessage(const QString &type, const QString &content,
                                        const QString &sender, const QString &receiver)
 {
     const QString timeStamp = QDateTime::currentDateTime().toString(Qt::ISODate);
@@ -103,6 +103,28 @@ void SqlConversationModel::sendMessage(const QString &type, const QString &conte
     newRecord.setValue("content", content);
     newRecord.setValue("sender", sender);
     newRecord.setValue("receiver", receiver);
+    newRecord.setValue("time", timeStamp);
+
+    if(!insertRecord(rowCount(), newRecord)){
+        qWarning() << "Failed to send message:" << lastError().text();
+        return;
+    }
+
+    submitAll();
+}*/
+
+void SqlConversationModel::sendMessage(const Message &msg)
+{
+    QString timeStamp = QDateTime::currentDateTime().toString(Qt::ISODate);
+
+    QSqlRecord newRecord = record();
+    newRecord.setValue("type", msg.type());
+    QString content = msg.type() == Message::Text ? msg.textMsg() : msg.filePath();
+    newRecord.setValue("content", content);
+    newRecord.setValue("sender", msg.authur());
+    newRecord.setValue("receiver", msg.recipient());
+    if(msg.timeStamp() != nullptr)
+        timeStamp = msg.timeStamp();
     newRecord.setValue("time", timeStamp);
 
     if(!insertRecord(rowCount(), newRecord)){

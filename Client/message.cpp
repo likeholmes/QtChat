@@ -4,6 +4,7 @@
 #include <QJsonValue>
 #include <QJsonDocument>
 #include <QFile>
+#include <QDateTime>
 
 Message::Message(QObject *parent) : QObject(parent)
 {
@@ -27,6 +28,8 @@ Message::Message(const QJsonObject &json){
         m_authur = json["authur"].toString();
     if(json.contains("recipient"))
         m_recipient = json["recipient"].toString();
+    if(json.contains("timeStamp"))
+        m_timeStamp = json["timeStamp"].toString();
 }
 
 Message::Message(const Message &msg){
@@ -64,21 +67,28 @@ QJsonObject Message::toJsonObject() const
 {
     QJsonObject json;
     json["type"] = m_type;
-    if(m_textMsg.length() > 0)
+    if(!m_textMsg.isNull())
         json["textMsg"] = m_textMsg;
-    if(m_fileName.length() > 0)
+    if(!m_fileName.isNull())
         json["fileName"] = m_fileName;
-    if(m_authur.length() > 0)
+    if(!m_authur.isNull())
         json["authur"] = m_authur;
-    if(m_recipient.length() > 0)
+    if(!m_recipient.isNull())
         json["recipient"] = m_recipient;
-    if(m_filePath.length() > 0)
+    if(!m_filePath.isNull())
         json["filePath"] = m_filePath;
+    if(!m_timeStamp.isNull())
+        json["timeStamp"] = m_timeStamp;
     if(m_filesize > 0)
         json["fileSize"] = m_filesize;
     if(m_fileIndex > 0)
         json["fileIndex"] = m_fileIndex;
     return json;
+}
+
+void Message::setTimeStamp()
+{
+    m_timeStamp = QDateTime::currentDateTime().toString(Qt::ISODate);
 }
 
 

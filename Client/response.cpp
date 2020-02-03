@@ -1,66 +1,69 @@
 #include "response.h"
 
 #include <QVariant>
+#include <QJsonDocument>
+#include <QJsonArray>
+#include <QJsonObject>
 
-QString Response::action() const
+Response::Response(const QByteArray &bytes)
 {
-    if(m_json.contains("action"))
-        return m_json["action"].toString();
-    return NULL;
+    QJsonDocument doc;
+    doc.fromBinaryData(bytes);
+    m_json = doc.object();
 }
 
-void Response::setAction(const QString &action)
+User Response::authur() const
 {
-    m_json["action"] = action;
-}
-
-QString Response::authur() const
-{
+    User user;
     if(m_json.contains("authur"))
-        return m_json["authur"].toString();
-    return NULL;
+        user = m_json["authur"].toObject();
+    return user;
 }
 
-void Response::setAuthur(const QString &authur)
+void Response::setAuthur(const User &authur)
 {
-    m_json["authur"] = authur;
+    m_json["authur"] = authur.toJsonObject();
 }
 
-QString Response::recipiant() const
+QList<User *> Response::searchResult() const
 {
-    if(m_json.contains("recipient"))
-        return m_json["recipient"].toString();
-    return NULL;
-}
-
-void Response::setRecipient(const QString &recipient)
-{
-    m_json["recipient"] = recipient;
-}
-
-QString Response::type() const
-{
-    if(m_json.contains("type"))
-        return m_json["type"].toString();
-    return NULL;
-}
-
-void Response::setType(const QString &type)
-{
-   m_json["type"] = type;
-}
-
-QByteArray Response::content() const
-{
-    if(m_json.contains("content"))
-    {
-        return m_json["content"].toVariant().toByteArray();
+    QJsonArray jsons;
+    if(m_json.contains("searchResult"))
+        jsons = m_json["searchResult"].toArray();
+    QList<User *> list;
+    for(QJsonValue value: jsons){
+        User *user = new User(value.toObject());
+        list.append(user);
     }
-    return NULL;
+    return list;
 }
 
-void Response::setContent(const QByteArray &content)
+void Response::setSearchContent(const QList<User *> &list)
 {
-    m_json["content"] = QVariant(content).toJsonValue();
+    QJsonArray jsons;
+    for(User *user: list){
+        jsons.append(user->toJsonObject());
+    }
+    m_json["searchContent"] = jsons;
+}
+
+Message Response::msgContent() const
+{
+    Message msg;
+    if(m_json.contains("msgContent"))
+        msg = m_json["msgContent"].toObject();
+    return msg;
+}
+
+void Response::setMsgContent(const Message &msg)
+{
+    m_json["msgContent"] = msg.toJsonObject();
+}
+
+QByteArray Response::toByteArray() const
+{
+    QJsonDocument doc;
+    doc.setObject(m_json);
+    return doc.toBinaryData();
 }
 

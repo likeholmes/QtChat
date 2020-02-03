@@ -40,7 +40,7 @@ public:
     Message& operator= (const Message &msg);
 
     enum Type{
-        Text, Picture, File
+        None, Text, Picture, File
     };
 
     Q_ENUM(Type)
@@ -101,6 +101,16 @@ public:
         m_recipient = recipient;
     }
 
+    QString timeStamp() const{
+        return m_timeStamp;
+    }
+
+    void setTimeStamp(const QString &timeStamp){
+        m_timeStamp = timeStamp;
+    }
+
+    void setTimeStamp();
+
     void dealFile();
 
     QJsonObject toJsonObject() const;
@@ -108,6 +118,7 @@ public:
 signals:
 
 private:
+    QString m_timeStamp;
     QString m_textMsg;
     Type m_type;
     qint64 m_filesize;

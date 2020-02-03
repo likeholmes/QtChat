@@ -47,7 +47,7 @@ void Client::dealRegister(const User &user)
     User newUser(user);
     request.setAction(Request::Register);
     request.setToken(m_token);
-    newUser.setAvatarData(rawData(user.avatarPath()));
+    newUser.loadDataFromPath();
     request.setAuthur(newUser);
     socket->write(request.toByteArray());
 }
@@ -85,7 +85,8 @@ void Client::dealSendMsg(const Message &msg)
     Request request;
     qint64 chunk = 65536;
     Message newMsg(msg);
-    newMsg.dealFile();
+    newMsg.setTimeStamp();
+    newMsg.dealFile(); //将小文件数据转成文字信息
     request.setAction(Request::Send);
 
     request.setMsgContent(newMsg);
@@ -117,8 +118,9 @@ void Client::responseHandle()
 
     switch (res.action()) {
     case Response::Login:
-        if(res.response()){
+        if(res.response() == Response::SUCCESS){
             m_user = res.authur();
+            m_user.saveAvatar();
             m_token = res.token();
             emit loginSuccess();
         }else{
@@ -126,8 +128,9 @@ void Client::responseHandle()
         }
         break;
     case Response::Register:
-        if(res.response()){
+        if(res.response() == Response::SUCCESS){
             m_user = res.authur();
+            m_user.saveAvatar();
             m_token = res.token();
             emit registerSuccess();
         }else{
@@ -135,7 +138,7 @@ void Client::responseHandle()
         }
         break;
     case Response::Search:
-        if(res.response()){
+        if(res.response() == Response::SUCCESS){
             m_searchContent = res.searchResult();
             emit searchSuccess();
         }else{
@@ -143,31 +146,32 @@ void Client::responseHandle()
         }
         break;
     case Response::Send:
-        if(res.response()){
+        if(res.response() == Response::SUCCESS){
             emit sendSuccess();
         }else{
             emit sendFail();
         }
         break;
     case Response::Add:
-        if(res.response()) {
+        if(res.response() == Response::SUCCESS) {
             emit addSuccess();
         }else{
             emit addFail();
         }
         break;
     case Response::Receive:
-        if(res.response()) {
+        if(res.response() == Response::SUCCESS) {
             //将消息添加到本地聊天记录数据库中
             //若收到的为文件则设置为存储地址，将存储地址保存到数据库中
             m_msg = new Message(res.msgContent());
+            //处理接收到的小文件数据，应从文字信息转成小数据
             emit msgReceived(); //新加的消息会有红点显示
         }else{
 
         }
         break;
     case Response::Download:
-        if(res.response()) {
+        if(res.response() == Response::SUCCESS) {
             //用户点击每一条消息的下载按钮，向服务器请求对应的文件序号
             //当服务器返回下载数据时，首先应该返回下载数据的大小和文件名（包括文件格式）
             //然后再主动读取二进制数据就像upload一样
@@ -176,7 +180,10 @@ void Client::responseHandle()
             emit downloadSuccess();
         }
         break;
+    default:
+        break;
     }
+    //socket->flush();
 }
 
 QByteArray Client::rawData(const QString &path)
@@ -215,7 +222,7 @@ void Client::download(const Message &msg)
 {
     //socket->flush();
     QString path = typeMap.at(msg.type()) + "/" + msg.fileName(); //相对位置
-    QFile file(QDir(path).currentPath());
+    QFile file(QDir(path).absolutePath());
     file.open(QIODevice::WriteOnly);
     //需要判断该文件是否存在
     qint64 chunk = 65536;

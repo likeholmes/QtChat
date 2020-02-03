@@ -10,37 +10,58 @@ class Response: public QObject
 public:
 
     enum State {
-        FAILURE, SUCCESS
+        NOSTATE, FAILURE, SUCCESS
     };
 
     enum Action{
-      Login, Register, Search, Add, Send, Receive, Download
+      None, Login, Register, Search, Add, Send, Receive, Download
     };
 
-    Response(QObject *parent);
+    Response(QObject *parent = nullptr):QObject(parent){}
 
     Response(const QByteArray &bytes);
 
-    State response() const;
-    void setResponse(State response);
+    State response() const{
+        if(m_json.contains("response"))
+            return State(m_json["response"].toInt());
+        return NOSTATE;
+    }
+    void setResponse(State response){
+        m_json["response"] = response;
+    }
 
-    QString token() const;
-    void setToken(const QString &token);
+    QString token() const{
+        if(m_json.contains("token"))
+            return m_json["token"].toString();
+        return nullptr;
+    }
+    void setToken(const QString &token){
+        m_json["token"] = token;
+    }
 
-    Action action() const;
-    void setAction(Action action);
+    Action action() const{
+        if(m_json.contains("action"))
+            return Action(m_json["action"].toInt());
+        return None;
+    }
+    void setAction(Action action){
+        m_json["action"] = action;
+    }
+
+    QJsonObject toJsonObject() const{
+        return m_json;
+    }
 
     User authur() const;
     void setAuthur(const User &authur);
 
-    QByteArray content() const;
-    void setContent(const QByteArray &content);
-
     QList<User*> searchResult() const;
+    void setSearchContent(const QList<User*> &list);
 
     Message msgContent() const;
+    void setMsgContent(const Message &msg);
 
-    QJsonObject toJsonObject() const;
+    QByteArray toByteArray() const;
 
 private:
     QJsonObject m_json;

@@ -9,35 +9,67 @@ class Request: public QObject
     Q_OBJECT
 public:
     enum Action{
-      Login, Register, Search, Add, Send, Receive, Download
+      None, Login, Register, Search, Add, Send, Receive, Download
     };
 
-    Request(QObject * parent = nullptr);
+    Request(QObject * parent = nullptr):QObject(parent){}
 
     Request(const QByteArray& bytes);
 
-    QString token() const;
-    void setToken(const QString &token);
+    QString token() const{
+        if(m_json.contains("token"))
+            return m_json["token"].toString();
+        return nullptr;
+    }
+    void setToken(const QString &token){
+        m_json["token"] = token;
+    }
 
-    Action action() const;
-    void setAction(Action action);
+    Action action() const{
+        if(m_json.contains("action"))
+            return Action(m_json["action"].toInt());
+        return None;
+    }
+    void setAction(Action action){
+        m_json["action"] = action;
+    }
+
+    int downloadIndex() const{
+        if(m_json.contains("downloadIndex"))
+            return m_json["downloadIndex"].toInt();
+        return 0;
+    }
+    void setDownloadIndex(int index){
+        m_json["downloadIndex"] = index;
+    }
+
+    QString searchContent() const{
+        if(m_json.contains("searchContent"))
+            return m_json["searchContent"].toString();
+        return nullptr;
+    }
+    void setSearchContent(const QString& searchContent){
+        m_json["searchContent"] = searchContent;
+    }
+
+    QString addContent() const{
+        if(m_json.contains("addContent"))
+            return m_json["addContent"].toString();
+        return nullptr;
+    }
+    void setAddContent(const QString & addContent){
+        m_json["addContent"] = addContent;
+    }
+
+    QJsonObject toJsonObject() const{
+        return m_json;
+    }
 
     User authur() const;
     void setAuthur(const User &authur);
 
     Message msgContent() const;
     void setMsgContent(const Message &content);
-
-    qint64 downloadIndex() const;
-    void setDownloadIndex(int index);
-
-    QString searchContent() const;
-    void setSearchContent(const QString& searchContent);
-
-    QString addContent() const;
-    void setAddContent(const QString & addContent);
-
-    QJsonObject toJsonObject() const;
 
     QByteArray toByteArray() const;
 

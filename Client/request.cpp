@@ -3,6 +3,7 @@
 #include <QJsonDocument>
 #include <QJsonArray>
 #include <QVariantMap>
+#include <QJsonParseError>
 
 Request::Request(const QByteArray& bytes)
 {
@@ -11,111 +12,38 @@ Request::Request(const QByteArray& bytes)
     m_json = doc.object();
 }
 
-QString Request::token() const
+User Request::authur() const
 {
-    if(m_json.contains("token"))
-        return m_json["token"].toString();
-    return NULL;
-}
-
-void Request::setToken(const QString &token)
-{
-   m_json["token"] = token;
-}
-
-QString Request::format() const
-{
-    if(m_json.contains("format"))
-        return m_json["format"].toString();
-    return NULL;
-}
-
-void Request::setFormat(const QString &format)
-{
-    m_json["format"] = format;
-}
-
-
-QString Request::password() const
-{
-    if(m_json.contains("password"))
-        return m_json["password"].toString();
-    return NULL;
-}
-
-void Request::setPassword(const QString &password)
-{
-    m_json["password"] = password;
-}
-
-QString Request::action() const
-{
-    //return m_body["action"].toString();
-    if(m_json.contains("action"))
-        return m_json["action"].toString();
-    return NULL;
-}
-
-void Request::setAction(const QString &action)
-{
-    m_json["action"] = action;
-}
-
-QString Request::authur() const
-{
+    User user;
     if(m_json.contains("authur"))
-        return m_json["authur"].toString();
-    return NULL;
+        user = m_json["authur"].toObject();
+    return user;
 }
 
-void Request::setAuthur(const QString &authur)
+void Request::setAuthur(const User &authur)
 {
-    m_json["authur"] = authur;
+    m_json["authur"] = authur.toJsonObject();
 }
 
-QString Request::recipiant() const
+Message Request::msgContent() const
 {
-    if(m_json.contains("recipient"))
-        return m_json["recipient"].toString();
-    return NULL;
+    Message msg;
+    if(m_json.contains("msgContent"))
+        msg = m_json["msgContent"].toObject();
+    return msg;
 }
 
-void Request::setRecipient(const QString &recipient)
+void Request::setMsgContent(const Message &content)
 {
-    m_json["recipient"] = recipient;
+    m_json["msgContent"] = content.toJsonObject();
 }
 
-QString Request::type() const
-{
-    if(m_json.contains("type"))
-        return m_json["type"].toString();
-    return NULL;
-}
 
-void Request::setType(const QString &type)
-{
-   m_json["type"] = type;
-}
-
-QByteArray Request::content() const
-{
-    if(m_json.contains("content"))
-    {
-        return m_json["content"].toVariant().toByteArray();
-    }
-    return NULL;
-}
-
-void Request::setContent(const QByteArray &content)
-{
-    m_json["content"] = QVariant(content).toJsonValue();
-}
 
 QByteArray Request::toByteArray() const
 {
     QJsonDocument doc;
     doc.setObject(m_json);
-
     return doc.toBinaryData();
 }
 

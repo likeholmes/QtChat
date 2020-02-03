@@ -23,7 +23,7 @@ static void createTable()
         qFatal("Failed to query database: %s", qPrintable(query.lastError().text()));
     }
 
-    query.exec("INSERT INTO contacts VALUES('1037', 'xiaohan', 'D://QtProject/chatAll/Client/image/avatar01.jpg', 0, '我就是我')");
+    //query.exec("INSERT INTO contacts VALUES('1037', 'xiaohan', 'D://QtProject/chatAll/Client/image/avatar01.jpg', 0, '我就是我')");
     //query.exec("INSERT INTO contacts VALUES('1038', 'xiaoguang', 'D://QtProject/chatAll/Client/image/avatar01.jpg', 0, '你就是我')");
 }
 
@@ -34,7 +34,6 @@ SqlContactsModel::SqlContactsModel(QObject *parent):
     setTable(contactsTableName);
     setEditStrategy(QSqlTableModel::OnManualSubmit);
     select();
-
 }
 
 QHash<int, QByteArray> SqlContactsModel::roleNames() const
@@ -59,7 +58,7 @@ QVariant SqlContactsModel::data(const QModelIndex &idx, int role) const
     return sqlRecord.value(role - Qt::UserRole);
 }
 
-void SqlContactsModel::addFriend(const QString &account, const QString &name,
+/*void SqlContactsModel::addFriend(const QString &account, const QString &name,
                                  const QString &avatar, const int isgroup, const QString &describe)
 {
     QSqlRecord newRecord = record();
@@ -71,6 +70,23 @@ void SqlContactsModel::addFriend(const QString &account, const QString &name,
 
     if(!insertRecord(rowCount(), newRecord)){
         qWarning() << "Failed to send message:" << lastError().text();
+        return;
+    }
+
+    submitAll();
+}*/
+
+void SqlContactsModel::addFriend(const User &user)
+{
+    QSqlRecord newRecord = record();
+    newRecord.setValue("account", user.account());
+    newRecord.setValue("name", user.name());
+    newRecord.setValue("avatar", user.avatarPath());
+    //newRecord.setValue("isgroup", );
+    newRecord.setValue("describe", user.describe());
+
+    if(!insertRecord(rowCount(), newRecord)){
+        qWarning() << "Failed to add Friend:" << lastError().text();
         return;
     }
 
