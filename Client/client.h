@@ -44,7 +44,7 @@ public:
 
     Q_INVOKABLE void dealSendMsg(const Message& message);
 
-    Q_INVOKABLE void dealDownload(int fileIndex);
+    Q_INVOKABLE void dealDownload(const QString &path);
 
     void responseHandle();
 

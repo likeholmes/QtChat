@@ -9,6 +9,8 @@
 #include <QUrl>
 #include <QDir>
 
+static const QString resourceBasePath = "D:/QtProject/chatAll/Client/resource/";
+
 Client::Client(QObject *parent):
     QObject(parent)
 {
@@ -98,7 +100,7 @@ void Client::dealSendMsg(const Message &msg)
         upload(newMsg.filePath());
 }
 
-void Client::dealDownload(int fileIndex)
+void Client::dealDownload(const QString& path)
 {
     socket->abort();
 
@@ -106,6 +108,8 @@ void Client::dealDownload(int fileIndex)
     request.setAuthur(m_user);
     request.setToken(m_token);
     request.setAction(Request::Download);
+
+    const int fileIndex = path.split('_')[1].split('.')[0].toInt();
     request.setDownloadIndex(fileIndex);
 
     socket->write(request.toByteArray());
@@ -120,7 +124,7 @@ void Client::responseHandle()
     case Response::Login:
         if(res.response() == Response::SUCCESS){
             m_user = res.authur();
-            m_user.saveAvatar();
+            m_user.saveAvatar(resourceBasePath);
             m_token = res.token();
             emit loginSuccess();
         }else{
@@ -130,7 +134,7 @@ void Client::responseHandle()
     case Response::Register:
         if(res.response() == Response::SUCCESS){
             m_user = res.authur();
-            m_user.saveAvatar();
+            m_user.saveAvatar(resourceBasePath);
             m_token = res.token();
             emit registerSuccess();
         }else{
@@ -164,6 +168,7 @@ void Client::responseHandle()
             //将消息添加到本地聊天记录数据库中
             //若收到的为文件则设置为存储地址，将存储地址保存到数据库中
             m_msg = new Message(res.msgContent());
+            m_msg->saveSmallFile(resourceBasePath, Message::Client);
             //处理接收到的小文件数据，应从文字信息转成小数据
             emit msgReceived(); //新加的消息会有红点显示
         }else{
@@ -204,7 +209,7 @@ void Client::upload(const QString &path)
     QFile file(path);
     file.open(QIODevice::ReadOnly);
     qint64 chunk = 65536;
-    //const char* end = "file is end!";
+    const char* end = "file is end!";
     //暂时不加结尾标识
     //注意加锁
 
@@ -213,7 +218,7 @@ void Client::upload(const QString &path)
     }
 
     //注意加锁
-    //socket->write(end);
+    socket->write(end);
 
     file.close();
 }
@@ -221,14 +226,20 @@ void Client::upload(const QString &path)
 void Client::download(const Message &msg)
 {
     //socket->flush();
-    QString path = typeMap.at(msg.type()) + "/" + msg.fileName(); //相对位置
-    QFile file(QDir(path).absolutePath());
+    QString path = resourceBasePath + typeMap.at(msg.type()) + "/" + msg.fileName();
+    QFile file(path);
     file.open(QIODevice::WriteOnly);
     //需要判断该文件是否存在
     qint64 chunk = 65536;
+    const char* end = "file is end!";
     //注意加锁
-    while (msg.fileSize() > chunk && !socket->atEnd()) {
-        file.write(socket->read(chunk));
+    while (msg.fileSize() > chunk) {
+        QByteArray bytes = socket->read(chunk);
+        if(bytes != end){
+            file.write(bytes);
+        }else{
+            break;
+        }
     }
     //注意加锁
     file.close();

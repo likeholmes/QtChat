@@ -16,17 +16,27 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    ../Client/message.cpp \
+    ../Client/request.cpp \
+    ../Client/response.cpp \
+    ../Client/user.cpp \
+    client.cpp \
     main.cpp \
     mainwindow.cpp \
     myserver.cpp \
-    mysocket.cpp \
     mythread.cpp
 
 HEADERS += \
+    ../Client/message.h \
+    ../Client/request.h \
+    ../Client/response.h \
+    ../Client/user.h \
+    client.h \
     mainwindow.h \
     myserver.h \
-    mysocket.h \
     mythread.h
+
+INCLUDEPATH += D:/QtProject/chatAll/Client
 
 FORMS += \
     mainwindow.ui

@@ -43,6 +43,7 @@ Page{
             delegate: Column {
                 id: itemColumn
                 property bool sentByMe: model.sender !== conversionWith.account
+                property bool isFileExist: model.type !== Message.Text && model.fileExist(model.content)
                 anchors.right: sentByMe ? parent.right : undefined
                 Row {
                     id: itemRow
@@ -61,31 +62,23 @@ Page{
                         width: 160
                         height: 160
                         visible: model.type !== Message.Text
-                        //这一部分很乱，暂时掠过
-                        Connections {
-                            target: client
-                            onDownloadSuccess: {
-                                model.content = client.downloadPath;
-                                //打开网址对应的文件
-                            }
-                        }
+                        source:  model.type === Message.Picture && isFileExsit ? model.content : "默认缩略图"
 
                         Button {
                             id: downloadButton
                             width: parent.width
                             height: parent.height
                             opacity: 0
+                            enabled: !isFileExist
+                            Connections {
+                                 target: client
+                                 onDownloadSuccess: {
+                                     //打开网址对应的文件
+                                    isFileExist = true
+                                 }
+                            }
                             onClicked: {
-                                if(model.content.length > 0){
-                                    //打开网址对应的图片
-                                    if(model.type === Message.Picture && model.size < 65535){
-                                        img.source = model.content
-                                    }else{
-                                        img.source = "缩略图"
-                                    }
-                                }else{
-                                    client.dealDownload(model.fileIndex);
-                                }
+                                client.dealDownload(model.content)
                             }
                         }
                     }

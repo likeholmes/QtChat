@@ -16,11 +16,11 @@ class Message : public QObject
 
     Q_PROPERTY(QString recipient READ recipient WRITE setRecipient)
 
-    Q_PROPERTY(QString fileIndex READ fileIndex WRITE setFileIndex)
+    Q_PROPERTY(int fileIndex READ fileIndex WRITE setFileIndex)
 
     Q_PROPERTY(QString fileName READ fileName WRITE setFileName)
 
-    Q_PROPERTY(QString fileSize READ fileSze WRITE setFileSize)
+    Q_PROPERTY(int fileSize READ fileSize WRITE setFileSize)
 
     Q_PROPERTY(QString textMsg READ textMsg WRITE setTextMsg)
 
@@ -35,12 +35,16 @@ public:
         m_type = Text;
     }
 
-    Message(const Message &msg);
+    Message(const Message &msg, QObject *parent = nullptr);
 
     Message& operator= (const Message &msg);
 
     enum Type{
         None, Text, Picture, File
+    };
+
+    enum Place{
+        Client, Server
     };
 
     Q_ENUM(Type)
@@ -55,6 +59,9 @@ public:
 
     QString textMsg() const{
         return m_textMsg;
+    }
+    void setTextMsg(const QString &content){
+        m_textMsg = content;
     }
 
     qint64 fileSize() const{
@@ -76,7 +83,7 @@ public:
     }
 
     void setFilePath(const QString& filePath){
-        m_filePath = filePath;
+        m_filePath = QString(filePath).replace('\\', '/');
     }
 
     int fileIndex() const{
@@ -113,11 +120,13 @@ public:
 
     void dealFile();
 
+    void saveSmallFile(const QString& basePath, Place place);
+
     QJsonObject toJsonObject() const;
 
 signals:
 
-private:
+private:  
     QString m_timeStamp;
     QString m_textMsg;
     Type m_type;

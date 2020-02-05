@@ -3,7 +3,9 @@
 
 #include <QMainWindow>
 
-#include "myserver.h"
+#include <QTcpServer>
+
+#include "client.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -18,13 +20,24 @@ public:
     ~MainWindow();
     void log(QString info);
 
+    void handleRequest();
+
+    void addClient();
+
+    void removeClient();
+
+    void dealError(const QString& err);
+
 private slots:
     void on_start_pushButton_clicked();
 
     void on_close_pushButton_clicked();
 
 private:
+    Client *findClient(const QString &account);
+
     Ui::MainWindow *ui;
-    MyServer server;
+    QTcpServer *m_server;
+    QList<Client*> m_clients;
 };
 #endif // MAINWINDOW_H

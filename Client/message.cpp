@@ -4,6 +4,7 @@
 #include <QJsonValue>
 #include <QJsonDocument>
 #include <QFile>
+#include <QDir>
 #include <QDateTime>
 
 Message::Message(QObject *parent) : QObject(parent)
@@ -32,7 +33,7 @@ Message::Message(const QJsonObject &json){
         m_timeStamp = json["timeStamp"].toString();
 }
 
-Message::Message(const Message &msg){
+Message::Message(const Message &msg, QObject *parent): QObject(parent){
     *this = msg;
 }
 
@@ -51,15 +52,53 @@ Message& Message::operator= (const Message &msg){
 //风险：万一message对象之前使用了，但是里面的数据没有变，就会搞错
 void Message::dealFile(){
     int chunk = 65536;
-    if(m_filePath.length() > 0){
-        QFile file(m_filePath);
-        m_fileName = file.fileName();
-        m_filesize = file.size();
-        file.open(QIODevice::ReadOnly);
-        if(m_filesize < chunk){
-            m_textMsg = file.read(chunk);
+    if(!filePath().isEmpty()){
+        QFile file(filePath());
+        if(file.exists()){
+            QString aname = file.fileName();
+            if(aname.contains("chat") && aname.contains("___")){
+                //从服务器端下载下来存在本地的文件
+                aname.remove(0, 4);
+                QStringList list = aname.split("___");
+                setFileIndex(list[0].toInt());
+                setFileName(list[1]);
+            }else{
+                setFileName(file.fileName());
+            }
+            setFileSize(file.size());
+            file.open(QIODevice::ReadOnly);
+            if(fileSize() < chunk){
+                setTextMsg(file.read(chunk));
+            }
+            file.close();
+        }else{
+            //文件不存在或路径不正确
         }
-        file.close();
+    }
+}
+
+void Message::saveSmallFile(const QString& basePath, Place place){
+    if(type() != Text){
+        QStringList ss;
+        ss[Picture] = "picture";
+        ss[File] = "file";
+
+        QString localPath = place == Server ?
+                    basePath + ss[type()] + "/" + fileName() :
+                    basePath + ss[type()] + "/chat" + QString().setNum(fileIndex()) + "___" + fileName();
+
+        if(fileSize() < 65536) {
+            QFile file(localPath);
+            if(!file.exists()){
+                QByteArray bytes = m_textMsg.toUtf8();
+                file.open(QIODevice::WriteOnly);
+                file.write(bytes);
+                file.close();
+           }
+        }
+        if(place == Client)
+            setTextMsg(localPath);
+        setFilePath(localPath);
     }
 }
 
@@ -67,17 +106,17 @@ QJsonObject Message::toJsonObject() const
 {
     QJsonObject json;
     json["type"] = m_type;
-    if(!m_textMsg.isNull())
+    if(!m_textMsg.isEmpty())
         json["textMsg"] = m_textMsg;
-    if(!m_fileName.isNull())
+    if(!m_fileName.isEmpty())
         json["fileName"] = m_fileName;
-    if(!m_authur.isNull())
+    if(!m_authur.isEmpty())
         json["authur"] = m_authur;
-    if(!m_recipient.isNull())
+    if(!m_recipient.isEmpty())
         json["recipient"] = m_recipient;
-    if(!m_filePath.isNull())
+    if(!m_filePath.isEmpty())
         json["filePath"] = m_filePath;
-    if(!m_timeStamp.isNull())
+    if(!m_timeStamp.isEmpty())
         json["timeStamp"] = m_timeStamp;
     if(m_filesize > 0)
         json["fileSize"] = m_filesize;
@@ -90,6 +129,7 @@ void Message::setTimeStamp()
 {
     m_timeStamp = QDateTime::currentDateTime().toString(Qt::ISODate);
 }
+
 
 
 

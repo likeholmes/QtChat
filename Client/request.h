@@ -16,6 +16,15 @@ public:
 
     Request(const QByteArray& bytes);
 
+    Request(const Request& res){
+        m_json = res.toJsonObject();
+    }
+
+    Request& operator=(const Request& res){
+        m_json = res.toJsonObject();
+        return *this;
+    }
+
     QString token() const{
         if(m_json.contains("token"))
             return m_json["token"].toString();

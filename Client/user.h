@@ -21,7 +21,7 @@ public:
 
     User(const QJsonObject &json);
 
-    User(const User &user);
+    User(const User &user, QObject *parent = nullptr);
 
     User& operator= (const User& user);
 
@@ -49,7 +49,9 @@ public:
     QString avatarPath() const{
         return m_avatarPath;
     }
-    void setAvatarPath(const QString &avatarPath);
+    void setAvatarPath(const QString &avatarPath){
+        m_avatarPath = QString(avatarPath).replace('\\', '/');
+    }
 
     QString account() const{
         return m_account;
@@ -60,7 +62,7 @@ public:
 
     void loadDataFromPath();
 
-    void saveAvatar();
+    void saveAvatar(const QString& basePath);
 
     QString avatarData() const{
         return m_avatarData;

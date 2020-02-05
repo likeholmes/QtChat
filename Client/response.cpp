@@ -25,6 +25,7 @@ void Response::setAuthur(const User &authur)
     m_json["authur"] = authur.toJsonObject();
 }
 
+//结束搜索时应清空这部分内存
 QList<User *> Response::searchResult() const
 {
     QJsonArray jsons;
@@ -38,7 +39,7 @@ QList<User *> Response::searchResult() const
     return list;
 }
 
-void Response::setSearchContent(const QList<User *> &list)
+void Response::setSearchContent(const QList<User*> &list)
 {
     QJsonArray jsons;
     for(User *user: list){

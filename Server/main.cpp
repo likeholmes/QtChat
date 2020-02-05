@@ -2,13 +2,14 @@
 
 #include <QApplication>
 #include <QSqlDatabase>
+#include <QSqlQuery>
 
 static bool connectToDataBase()
 {
     QSqlDatabase db = QSqlDatabase::addDatabase("QMYSQL");
     db.setHostName("127.0.0.1");
     db.setUserName("root");
-    db.setPassword("root");
+    db.setPassword("123456");
     db.setDatabaseName("chat");
     return db.open();
 }

@@ -5,6 +5,7 @@
 #include <QSqlError>
 #include <QSqlRecord>
 #include <QDateTime>
+#include <QFileInfo>
 
 static const char * conversationTableName = "conversation";
 static void createTable()
@@ -119,8 +120,7 @@ void SqlConversationModel::sendMessage(const Message &msg)
 
     QSqlRecord newRecord = record();
     newRecord.setValue("type", msg.type());
-    QString content = msg.type() == Message::Text ? msg.textMsg() : msg.filePath();
-    newRecord.setValue("content", content);
+    newRecord.setValue("content", msg.textMsg());
     newRecord.setValue("sender", msg.authur());
     newRecord.setValue("receiver", msg.recipient());
     if(msg.timeStamp() != nullptr)
@@ -133,5 +133,10 @@ void SqlConversationModel::sendMessage(const Message &msg)
     }
 
     submitAll();
+}
+
+bool SqlConversationModel::fileExist(const QString &path)
+{
+    return QFileInfo::exists(path);
 }
 
