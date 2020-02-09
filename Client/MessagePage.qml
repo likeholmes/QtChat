@@ -53,7 +53,7 @@ Page{
                     Image {
                         width: 40
                         height: 40
-                        source: "file:/"+conversionWith.avatarPath
+                        source: "file:/" + conversionWith.avatarPath
                         visible: !sentByMe
                     }
 

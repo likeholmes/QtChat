@@ -14,10 +14,10 @@ public:
     };
 
     enum Action{
-      None, Login, Register, Search, Add, Send, Receive, Download
+      None, Login, Register, Search, Add, Send, Receive, Download, Accept
     };
 
-    Response(QObject *parent = nullptr):QObject(parent){}
+    Response(QObject *parent = nullptr):QObject(parent){m_isNull = true;}
 
     Response(const QByteArray &bytes);
 
@@ -28,6 +28,7 @@ public:
     }
     void setResponse(State response){
         m_json["response"] = response;
+        m_isNull = false;
     }
 
     QString token() const{
@@ -37,6 +38,19 @@ public:
     }
     void setToken(const QString &token){
         m_json["token"] = token;
+        m_isNull = false;
+    }
+
+    User acceptContent() const{
+        User user;
+        if(m_json.contains("acceptContent")){
+            user = m_json["acceptContent"].toObject();
+        }
+        return user;
+    }
+
+    void setAcceptContent(const User& user){
+        m_json["acceptContent"] = user.toJsonObject();
     }
 
     Action action() const{
@@ -46,6 +60,7 @@ public:
     }
     void setAction(Action action){
         m_json["action"] = action;
+        m_isNull = false;
     }
 
     QJsonObject toJsonObject() const{
@@ -63,9 +78,13 @@ public:
 
     QByteArray toByteArray() const;
 
+    bool isNull() const{
+        return m_isNull;
+    }
+
 private:
     QJsonObject m_json;
-
+    bool m_isNull;
 };
 
 #endif // RESPONSE_H

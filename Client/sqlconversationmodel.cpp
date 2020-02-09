@@ -13,7 +13,7 @@ static void createTable()
     if(QSqlDatabase::database().tables().contains(conversationTableName)){
         return;
     }
-    qDebug()<< "重新建表";
+
     QSqlQuery query;
     //query.exec("DROP TABLE IF EXISTS 'conversation'");
     if (!query.exec("CREATE TABLE 'conversation' ("
@@ -133,6 +133,11 @@ void SqlConversationModel::sendMessage(const Message &msg)
     }
 
     submitAll();
+}
+
+void SqlConversationModel::sendMessage(Message *msg)
+{
+    sendMessage(*msg);
 }
 
 bool SqlConversationModel::fileExist(const QString &path)

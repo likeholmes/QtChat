@@ -2,14 +2,22 @@
 
 #include <QJsonDocument>
 #include <QJsonArray>
+#include <QJsonParseError>
 #include <QVariantMap>
 #include <QJsonParseError>
+#include <QtDebug>
 
 Request::Request(const QByteArray& bytes)
 {
-    QJsonDocument doc;
-    doc.fromBinaryData(bytes);
-    m_json = doc.object();
+    QJsonDocument doc = QJsonDocument::fromJson(bytes);
+    if(doc.isEmpty()){
+        qDebug() << "二进制数据未成功解析为jsonDoc" ;
+        m_isNull = true;
+    }
+    else{
+        m_json = doc.object();
+        m_isNull = false;
+    }
 }
 
 User Request::authur() const
@@ -23,6 +31,7 @@ User Request::authur() const
 void Request::setAuthur(const User &authur)
 {
     m_json["authur"] = authur.toJsonObject();
+    m_isNull = false;
 }
 
 Message Request::msgContent() const
@@ -36,6 +45,7 @@ Message Request::msgContent() const
 void Request::setMsgContent(const Message &content)
 {
     m_json["msgContent"] = content.toJsonObject();
+    m_isNull = false;
 }
 
 
@@ -44,6 +54,6 @@ QByteArray Request::toByteArray() const
 {
     QJsonDocument doc;
     doc.setObject(m_json);
-    return doc.toBinaryData();
+    return doc.toJson(QJsonDocument::Compact);
 }
 

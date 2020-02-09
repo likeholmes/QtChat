@@ -16,7 +16,7 @@ public:
 
     Client(QTcpSocket *socket, QObject *parent = nullptr);
 
-    QSharedPointer<Request> nextPendingRequest();
+    void nextPendingRequest();
 
     void sendMsg();
 
@@ -30,9 +30,17 @@ public:
 
     void addFriend();
 
+    void accept();
+
     void download(int index);
 
-    QString account() const;
+    QString account() const{
+        return m_user.account();
+    }
+
+    Request request() const{
+        return m_request;
+    }
 
     void disconnect();
 
@@ -44,19 +52,30 @@ signals:
 
     void error(const QString& err);
 
+    void send(const QString& account);
+
+    void add(const QString& account);
+
 private:
     void upload(Message &msg);
 
+    void writeSocket(const QByteArray &bytes);
+
     int getId(const QString& account);
+
+    Message::Type getType(int fileIndex);
 
     QString filePath(int fileIndex);
 
     QString getAccount(int id);
 
+    int getFileId(int fileIndex);
+
     Request m_request;
     QTcpSocket *m_socket;
     QString m_token;
     User m_user;
+    QByteArray end;
 };
 
 #endif // CLIENT_H

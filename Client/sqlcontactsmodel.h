@@ -14,7 +14,7 @@ public:
 
     QVariant data(const QModelIndex &idx, int role = Qt::DisplayRole) const override;
 
-    Q_INVOKABLE void addFriend(const User &user);
+    Q_INVOKABLE void addFriend(User *user);
 
 };
 

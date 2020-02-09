@@ -6,7 +6,7 @@ import io.qtchat.mytype 1.0
 
 Page {
     id: root
-    anchors.fill: parent
+    //anchors.fill: parent
 
     GridLayout {
         id: gridLayout
@@ -107,7 +107,7 @@ Page {
                 name: nameInput.text
                 password: passwordInput.text
                 describe: describeInput.text
-                avatarPath: fileDialog.fileUrl.toLocalFile()
+                avatarPath: fileDialog.fileUrl.toString()
             }
 
             Connections {

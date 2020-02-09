@@ -6,19 +6,19 @@ import io.qtchat.mytype 1.0
 
 Page {
     id: indexPage
-    anchors.fill: parent
+    //anchors.fill: parent
 
     property bool readySearch : searchInput.length > 0
     property User user
 
-    Connections {
+    /*Connections {
         target: client
         onMsgReceived: {
             msg = client.message;
             //如何让全局都访问一个局部对象，并且在任何地方都可以接收【接收消息】信号
             messagelist.model.sendMessage(msg.type, msg.textMsg, msg.authur, msg.recipient)
         }
-    }
+    }*/
 
     header: Rectangle {
         height: 140
@@ -32,11 +32,11 @@ Page {
                 id: avatar
                 width: 60
                 height: 60
-                source: user.avatarPath
+                source: "file:/" + user.avatarPath
             }
             Label {
                 leftPadding: 15
-                text: "昵称" + user.name
+                text: user.name
             }
         }
 
@@ -95,20 +95,28 @@ Page {
                         id: contact_avatar
                         height: parent.height
                         width: parent.height
-                        source: model.avatarPath
+                        source: "file:/" + model.avatarPath
                     }
 
                     Label {
                         id: contact_account
-                        text: model.name
+                        text: model.name + model.avatarPath
                     }
                 }
                 onClicked: dialog.open()
+                User{
+                    id: newFriend
+                    account: model.account
+                    name: model.name
+                    describe: model.describe
+                    avatarPath: model.avatarPath
+                    isgroup: model.isgroup
+                }
 
                 //待改
                 Connections{
                     target: client
-                    onAddSuccess: contact_list.model.addFriend(model);//更新联系人信息
+                    onAddSuccess: contact_list.model.addFriend(newFriend);//更新联系人信息
                 }
                 //待改
 
@@ -174,7 +182,7 @@ Page {
 
                         Image {
                             id: contactAvatar
-                            source: "file:"+model.avatar
+                            source: "file:/" + model.avatar
                             width: 60
                             height: 60
                         }
@@ -185,9 +193,17 @@ Page {
                         }
                     }
 
+                    User{
+                        id: aContact
+                        name: model.name
+                        avatarPath: model.avatar
+                        isgroup: model.isgroup
+                        account: model.account
+                    }
+
                     onClicked: {
                         indexPage.StackView.view.push(
-                                    "qrc:/MessagePage.qml", { conversionWith: model, user: user});
+                                    "qrc:/MessagePage.qml", { conversionWith: aContact, user: user});
                     }
                 }
             }

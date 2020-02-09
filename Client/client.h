@@ -13,9 +13,7 @@ class Client: public QObject
 
     Q_PROPERTY(QQmlListProperty<User> searchContent READ searchContent);
 
-    Q_PROPERTY(Message* message READ message);
-
-    Q_PROPERTY(QString downloadPath READ downloadPath);
+    Q_PROPERTY(User* user READ user);
 
 public:
     Client(QObject *parent = nullptr);
@@ -30,23 +28,36 @@ public:
     User *searchUser(int idx) const;
     void clearUsers();
 
-    Message* message() const;
-
-    QString downloadPath() const;
+    User* user() const{
+        return m_user;
+    }
 
     Q_INVOKABLE void dealLogin(const QString &account, const QString & password);
 
-    Q_INVOKABLE void dealRegister(const User& user);
+    Q_INVOKABLE void dealRegister(User* user);
 
     Q_INVOKABLE void dealSearch(const QString &searchContent);
 
     Q_INVOKABLE void dealAddFriend(const QString &account);
 
-    Q_INVOKABLE void dealSendMsg(const Message& message);
+    Q_INVOKABLE void dealSendMsg(Message* message);
 
     Q_INVOKABLE void dealDownload(const QString &path);
 
+
+
+    /*Q_INVOKABLE void test(){
+        User user;
+        user.setAvatarPath("D:\\QtProject\\chatAll\\Client\\resource\\picture\\avatar01.jpg");
+        user.loadDataFromPath();
+        user.saveAvatar("D:/QtProject/chatAll/Client/resource/");
+    }*/
+
     void responseHandle();
+
+    void dealData();
+
+    void dealAccept();
 
 signals:
 
@@ -74,6 +85,8 @@ signals:
 
     void downloadSuccess();
 
+    void dataCome();
+
 private:
     QByteArray rawData(const QString &path);
 
@@ -91,10 +104,11 @@ private:
     QTcpSocket *socket;
     QString m_token;
     QList<User *> m_searchContent;
-    Message *m_msg;
-    User m_user;
+    //QList<Message *>m_msg;
+    User *m_user;
     QString m_downloadPath;
     QList<QString> typeMap;
+    QByteArray m_data;
 };
 
 #endif // CLIENT_H

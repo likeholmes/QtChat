@@ -9,10 +9,13 @@
 
 Message::Message(QObject *parent) : QObject(parent)
 {
-
+    m_filesize = 0;
+    m_fileIndex = 0;
 }
 
 Message::Message(const QJsonObject &json){
+    m_filesize = 0;
+    m_fileIndex = 0;
     if(json.contains("textMsg"))
         m_textMsg = json["textMsg"].toString();
     if(json.contains("type"))
@@ -31,6 +34,7 @@ Message::Message(const QJsonObject &json){
         m_recipient = json["recipient"].toString();
     if(json.contains("timeStamp"))
         m_timeStamp = json["timeStamp"].toString();
+
 }
 
 Message::Message(const Message &msg, QObject *parent): QObject(parent){
@@ -46,6 +50,7 @@ Message& Message::operator= (const Message &msg){
     m_textMsg = msg.textMsg();
     m_authur = msg.authur();
     m_recipient = msg.recipient();
+    m_timeStamp = msg.timeStamp();
     return *this;
 }
 
@@ -68,7 +73,7 @@ void Message::dealFile(){
             setFileSize(file.size());
             file.open(QIODevice::ReadOnly);
             if(fileSize() < chunk){
-                setTextMsg(file.read(chunk));
+                setTextMsg(file.read(chunk).toBase64());
             }
             file.close();
         }else{
@@ -90,7 +95,7 @@ void Message::saveSmallFile(const QString& basePath, Place place){
         if(fileSize() < 65536) {
             QFile file(localPath);
             if(!file.exists()){
-                QByteArray bytes = m_textMsg.toUtf8();
+                QByteArray bytes = QByteArray::fromBase64(m_textMsg.toUtf8());
                 file.open(QIODevice::WriteOnly);
                 file.write(bytes);
                 file.close();

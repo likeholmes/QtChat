@@ -28,10 +28,15 @@ public:
 
     void dealError(const QString& err);
 
+    void dealAdd(const QString& account);
+
+    void dealSend(const QString& account);
+
 private slots:
     void on_start_pushButton_clicked();
 
     void on_close_pushButton_clicked();
+    void on_clear_pushButton_clicked();
 
 private:
     Client *findClient(const QString &account);

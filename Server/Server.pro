@@ -22,9 +22,7 @@ SOURCES += \
     ../Client/user.cpp \
     client.cpp \
     main.cpp \
-    mainwindow.cpp \
-    myserver.cpp \
-    mythread.cpp
+    mainwindow.cpp
 
 HEADERS += \
     ../Client/message.h \
@@ -32,9 +30,7 @@ HEADERS += \
     ../Client/response.h \
     ../Client/user.h \
     client.h \
-    mainwindow.h \
-    myserver.h \
-    mythread.h
+    mainwindow.h
 
 INCLUDEPATH += D:/QtProject/chatAll/Client
 

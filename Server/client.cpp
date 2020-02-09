@@ -5,7 +5,7 @@
 #include <QDateTime>
 #include <QFile>
 #include <QDir>
-#include <QSharedPointer>
+#include <QScopedPointer>
 #include <QSqlError>
 
 static QString resourceBasePath = "D:/QtProject/chatAll/Server/resource/";
@@ -18,6 +18,7 @@ Client::Client(QObject *parent) : QObject(parent)
 Client::Client(QTcpSocket *socket, QObject *parent):QObject(parent)
 {
     m_socket = socket;
+    end = QString("end").toUtf8();
     connect(m_socket, &QTcpSocket::disconnected, this, &Client::disconnect);
     connect(m_socket, &QTcpSocket::readyRead, this, &Client::nextPendingRequest);
 }
@@ -27,20 +28,20 @@ void Client::disconnect(){
     emit disconnected();
 }
 
-QSharedPointer<Request> Client::nextPendingRequest()
+void Client::nextPendingRequest()
 {
     //如果传来的数据是文件该怎么办，这些值该怎么处理？如果连起来处理呢
     if(m_socket->bytesAvailable()){
+        qDebug() << "开始读取请求";
         QByteArray bytes = m_socket->readAll();
         //需判断bytes是否可以解析为request
         //这些数据怎么释放呢
-        QSharedPointer<Request> res(new Request(bytes));
-        //Request *res = new Request(bytes);
-        m_request = *res;
+        qDebug() << "请求读取完成，开始解析请求";
+        Request res(bytes);
+        qDebug() <<"请求解析完成";
+        m_request = res;
         emit newRequest();
-        return res;
     }
-    return nullptr;
 }
 
 void Client::login()
@@ -51,36 +52,46 @@ void Client::login()
     rp.setAction(Response::Login);
     rp.setResponse(Response::SUCCESS);
     QString sql = "SELECT u.id, u.name, u.describe, u.avatar, f.path path "
-                  "FROM (SELECT * FROM users"
+                  "FROM (SELECT * FROM users "
                   "WHERE account = '" + user.account() + "' AND password = '" + user.password() + "') u "
                   "LEFT JOIN files f "
                   "ON u.avatar = f.id";
     QString err;
+    bool loginsuccess = false;
     if(!query.exec(sql)){
         err = query.lastError().text();
         rp.setResponse(Response::FAILURE);
     }else{
         if(query.next()){  //找到用户之后；颁发某种通行证;
             //取出id,作为之后的索引返回给客户端，然后客户端再每次请求的时候发送该字段，安全暂不考虑
-            int id = query.value("id").toInt();
-            rp.setToken(QString().setNum(id));
-            m_user.setName(query.value("name").toString());
-            m_user.setAccount(user.account());
+            int id = query.value("id").toInt();   
+            m_token = QString().setNum(id);
+            rp.setToken(m_token);
+            user.setName(query.value("name").toString());
+            user.setAccount(user.account());
             //两个表联合查询头像地址，获取头像
-            m_user.setAvatarPath(query.value("path").toString());
-            m_user.loadDataFromPath();//将数据存储到user中，这一步有可能出错
+            user.setAvatarPath(query.value("path").toString());
+            user.loadDataFromPath();//将数据存储到user中，这一步有可能出错
             rp.setResponse(Response::SUCCESS);
-            rp.setAuthur(m_user);
+            rp.setAuthur(user);
+            m_user = user;
+            loginsuccess = true;
         }else{
-            err = query.lastError().text();
+            err = "没有该用户 "+user.account();
+            rp.setResponse(Response::FAILURE);
         }
     }
     //需要保护，如果该套接字有其它地方要写入
-    m_socket->write(rp.toByteArray());
+    writeSocket(rp.toByteArray());
 
     //检查是否有离线消息
-    receiveMsg();
-    emit error(err);
+    if(loginsuccess){
+        err = user.account() + "登录成功";
+        receiveMsg();
+        accept();
+    }
+    if(!err.isEmpty())
+        emit error(err);
 }
 
 void Client::doRegister()
@@ -89,23 +100,24 @@ void Client::doRegister()
     QSqlTableModel model;
     model.setTable("users");
     model.setEditStrategy(QSqlTableModel::OnManualSubmit);
-    QSqlRecord newRecord;
+    QSqlRecord newRecord = model.record();
     Response res;
     res.setAction(Response::Register);
     res.setResponse(Response::SUCCESS);
     QString err;
     //生成账号的方法过于简略
     if(!model.select()){
-        err = "未成功加载用户表";
+        err = model.lastError().text();
         res.setResponse(Response::FAILURE);
     }else{
         int accountIdx = 100000 + model.rowCount();
-        QString account = QString(accountIdx);
+        QString account = QString().setNum(accountIdx);
         //生成账号的方法过于简略
 
         newRecord.setValue("name", user.name());
         newRecord.setValue("password", user.password());
         newRecord.setValue("account", account);
+        newRecord.setValue("isgroup", user.isGroup());
         user.setAccount(account);
         //检验对象不为空的方法可以这样吗
         if(!user.describe().isEmpty())
@@ -115,34 +127,51 @@ void Client::doRegister()
         {
             user.saveAvatar(resourceBasePath);
             //插入存放头像的数据表中，获取对应的index
+            int fileIndex = QDateTime::currentMSecsSinceEpoch();
             QSqlQuery query;
-            QString sql = "INSERT INTO files (path) VALUES('" + user.avatarPath()
-                           + "')";
+            qDebug()<<user.avatarPath();
+            qDebug()<<fileIndex;
+            QString sql = QString("INSERT INTO files (path, fileIndex, type) VALUES("
+                                  "'%1', %2, 2)").arg(user.avatarPath()).arg(fileIndex);
             if(!query.exec(sql)){
+                qDebug() << query.lastError();
                 err = "头像插入失败";
+                return;
                 //response = Response::FAILURE;
             }else {
-                avatarId = query.size();
+                avatarId = getFileId(fileIndex);
             }
         }else{
-            err = "用户未成功上传头像";
+            qDebug() << "用户未上传头像";
+            user.setAvatarPath(filePath(0));
+            user.loadDataFromPath();
         }
         newRecord.setValue("avatar", avatarId);
-        model.insertRecord(model.rowCount(), newRecord);
-        if(!model.submitAll()){
-            err = "未注册成功!";
-            res.setResponse(Response::FAILURE);
-        }else{//获取新插入的记录的id
-            QString token = QString().setNum(model.rowCount());
-            m_request.setToken(token);
-            res.setToken(token);  //id//res.setToken(m_request.token());
-        }
-        m_user = user;
-        res.setAuthur(user);
-    }
 
-    m_socket->write(res.toByteArray());
-    emit error(err);
+        if(!model.insertRecord(model.rowCount(), newRecord))
+        {
+            err = "未成功插入记录";
+            qDebug() << model.lastError();
+            res.setResponse(Response::FAILURE);
+        }else{
+            if(!model.submitAll()){
+                err = "未成功提交记录";
+                qDebug() << model.lastError();
+                res.setResponse(Response::FAILURE);
+            }else{//获取新插入的记录的id
+                QString token = QString().setNum(model.rowCount());
+                m_token = token;
+                m_request.setToken(token);
+                res.setToken(token);  //id//res.setToken(m_request.token());
+            }
+            m_user = user;
+            res.setAuthur(user);
+        }
+    }
+    err = user.account() + "注册成功";
+    writeSocket(res.toByteArray());
+    if(!err.isEmpty())
+        emit error(err);
 }
 
 void Client::search()
@@ -153,19 +182,20 @@ void Client::search()
     rp.setResponse(Response::FAILURE);
     QSqlQuery query;
     QString err;
-    QString sql = QString("SELECT u.id, u.name, u.describe, u.avatar, f.path path "
-                          "FROM (SELECT * FROM users"
+    QString sql = QString("SELECT u.*, f.path path "
+                          "FROM (SELECT * FROM users "
                           "WHERE account LIKE '%1' OR name LIKE '%1') u "
                           "LEFT JOIN files f "
                           "ON u.avatar = f.id").arg("%" + m_request.searchContent() + "%");
     if(!query.exec(sql))
     {
+        qDebug()<<query.lastError();
         err = "未成功执行查找数据库操作";
     }else{
         QList<User*> users;
         while (query.next()) {
             //User *user = new User;
-            QSharedPointer<User> user(new User);
+            User* user(new User);
             user->setName(query.value("name").toString());
             user->setAccount(query.value("account").toString());
             if(!query.value("describe").isNull())
@@ -173,14 +203,18 @@ void Client::search()
             //从头像表中查找头像数据
             user->setAvatarPath(query.value("path").toString());
             user->loadDataFromPath();
-            users << user.get();
+            users << user;
         }
         rp.setSearchContent(users);
         //释放users的内存
+        for(User* i : users){
+            delete i;
+        }
         rp.setResponse(Response::SUCCESS);
     }
-    m_socket->write(rp.toByteArray());
-    emit error(err);
+    writeSocket(rp.toByteArray());
+    if(!err.isEmpty())
+        emit error(err);
 }
 
 void Client::addFriend()
@@ -214,8 +248,12 @@ void Client::addFriend()
             rp.setResponse(Response::FAILURE);
         }
     }
-    m_socket->write(rp.toByteArray());
-    emit error(err);
+    writeSocket(rp.toByteArray());
+    if(!err.isEmpty())
+        emit error(err);
+    if(rp.response() == Response::SUCCESS){
+        emit add(fri_account);
+    }
 }
 
 void Client::sendMsg()
@@ -233,7 +271,7 @@ void Client::sendMsg()
         err = "未成功加载对话表";
         rp.setResponse(Response::FAILURE);
     }else{
-        int fileIndex = model.rowCount() + 1;
+        int fileIndex = QDateTime::currentMSecsSinceEpoch();
         msg.setFileIndex(fileIndex);
         QString content = msg.textMsg();
         if(msg.type() != Message::Text){
@@ -248,8 +286,9 @@ void Client::sendMsg()
                 //加入到数据库中
             }
             QSqlQuery query;
-            if(!query.exec(QString("INSERT INTO IGNORE files (fileIndex, path)"
-                                  "VALUES(%1, '%2')").arg(fileIndex).arg(msg.filePath()))){
+            if(!query.exec(QString("INSERT INTO IGNORE files (fileIndex, path, type)"
+                                  "VALUES(%1, '%2', %3)").arg(fileIndex)
+                           .arg(msg.filePath()).arg(msg.type()))){
                 err = "未成功将文件数据插入文件表中";
                 rp.setResponse(Response::FAILURE);
             }
@@ -262,6 +301,7 @@ void Client::sendMsg()
         newRecord.setValue("type", msg.type());
         newRecord.setValue("time", msg.timeStamp());
         newRecord.setValue("content", content);
+        newRecord.setValue("received", 0);
         if(!model.insertRecord(model.rowCount(), newRecord)){
             err = "未成功将消息存到对话表中";
             rp.setResponse(Response::FAILURE);
@@ -270,8 +310,12 @@ void Client::sendMsg()
             rp.setResponse(Response::FAILURE);
         }
     }
-    m_socket->write(rp.toByteArray());
-    emit error(err);
+    writeSocket(rp.toByteArray());
+    if(!err.isEmpty())
+        emit error(err);
+    if(rp.response() == Response::SUCCESS){
+        emit send(msg.recipient());
+    }
 }
 
 void Client::receiveMsg()
@@ -283,7 +327,7 @@ void Client::receiveMsg()
                     .arg(getId(m_user.account()))); //这样直接传值很容易出错
     model.setEditStrategy(QSqlTableModel::OnManualSubmit);
     if(model.select()){
-        for(int i = 1; i <= model.rowCount(); i++){
+        for(int i = 0; i < model.rowCount(); ++i){
             Response rp;
             rp.setAction(Response::Receive);
             Message msg;
@@ -307,18 +351,19 @@ void Client::receiveMsg()
             m_socket->write(rp.toByteArray());
             //修改当前记录的标志位
             aRecord.setValue("received", 1);
-            aRecord.setGenerated("received", false);
+            //aRecord.setGenerated("received", false);
             if(!model.setRecord(i, aRecord)){
                 err = "未成功更新接收消息的标志位";
             }
-            m_socket->write(rp.toByteArray());
+            writeSocket(rp.toByteArray());
         }
         if(!model.submitAll())
             err = "接收信息大的修改未提交成功";
     }else{
         err = "对话表加载失败";
     }
-    emit error(err);
+    if(!err.isEmpty())
+        emit error(err);
 }
 
 void Client::download(int index)
@@ -331,7 +376,7 @@ void Client::download(int index)
     //为什么：可能获取的数据是另一个请求的数据；
     QFile file(filePath(index));
     if(file.exists()){
-        msg.setType(Message::File); //不管了，假设大文件通通是file
+        msg.setType(getType(index));
         msg.setFileIndex(index);
         msg.setFileName(file.fileName());
         msg.setFileSize(file.size());
@@ -339,7 +384,6 @@ void Client::download(int index)
 
         file.open(QIODevice::ReadOnly);
         qint64 chunk = 65536;
-        const char* end = "file is end!";
         //暂时不加结尾标识
         //注意加锁
         m_socket->write(rp.toByteArray());
@@ -355,6 +399,7 @@ void Client::download(int index)
     }else{
         rp.setResponse(Response::FAILURE);
         m_socket->write(rp.toByteArray());
+        m_socket->write(end);
     }
 }
 
@@ -370,7 +415,6 @@ void Client::upload(Message &msg)
         file.open(QIODevice::WriteOnly);
         //需要判断该文件是否存在
         qint64 chunk = 65536;
-        const char* end = "file is end!";
         //注意加锁
         while (msg.fileSize() > chunk) {
             QByteArray bytes = m_socket->read(chunk);
@@ -400,7 +444,8 @@ QString Client::filePath(int fileIndex)
         err = "不是有效的fileIndex";
     }
     return res;
-    emit error(err);
+    if(!err.isEmpty())
+        emit error(err);
 }
 
 int Client::getId(const QString &account)
@@ -417,7 +462,8 @@ int Client::getId(const QString &account)
         err = "不是有效的account";
     }
     return res;
-    emit error(err);
+    if(!err.isEmpty())
+        emit error(err);
 }
 
 QString Client::getAccount(int id)
@@ -434,5 +480,84 @@ QString Client::getAccount(int id)
         err = "不是有效的id";
     }
     return res;
-    emit error(err);
+    if(!err.isEmpty())
+        emit error(err);
+}
+
+Message::Type Client::getType(int fileIndex)
+{
+    QSqlQuery query;
+    QString err;
+    Message::Type res = Message::File;
+    if(!query.exec("SELECT * FROM files WHERE fileIndex = " + QString().setNum(fileIndex)))
+    {
+        err = "执行查询文件类型失败";
+    }else if(query.next()){
+        res = Message::Type(query.value("type").toInt());
+    }else{
+        err = "不是有效的fileIndex";
+    }
+    return res;
+    if(!err.isEmpty())
+        emit error(err);
+}
+
+int Client::getFileId(int fileIndex)
+{
+    QSqlQuery query;
+    QString err;
+    int res = 1;
+    if(!query.exec("SELECT * FROM files WHERE fileIndex = " + QString().setNum(fileIndex)))
+    {
+        err = "执行查询文件id失败";
+    }else if(query.next()){
+        res = query.value("id").toInt();
+    }else{
+        err = "不是有效的fileIndex";
+    }
+    return res;
+    if(!err.isEmpty())
+        emit error(err);
+}
+
+void Client::writeSocket(const QByteArray &bytes)
+{
+    m_socket->write(bytes);
+    if(bytes.size() % 65536 == 0)
+        m_socket->write(end);
+}
+
+void Client::accept()
+{
+    QString sql = "SELECT u.name, u.describe, u.account, u.isgroup , u.path "
+                  "FROM (SELECT * FROM contacts WHERE user2 = " + m_token +
+                  ") c "
+                  "LEFT JOIN (SELECT u.id, u.name, u.account, u.describe, u.isgroup, f.path "
+                  "FROM users u JOIN files f "
+                  "ON u.avatar = f.id) u "
+                  "ON c.user1 = u.id";
+    QString err;
+    QSqlQuery query;
+    Response rp;
+    rp.setAuthur(m_user);
+    rp.setAction(Response::Accept);
+    rp.setResponse(Response::SUCCESS);
+    if(!query.exec(sql)){
+        qDebug() << query.lastError();
+        err = "未成功执行查询语句";
+    }else{
+        while(query.next()){
+            User user;
+            user.setName(query.value("name").toString());
+            user.setAccount(query.value("account").toString());
+            user.setIsGroup(query.value("isgroup").toInt());
+            user.setDescribe(query.value("describe").toString());
+            user.setAvatarPath(query.value("path").toString());
+            user.loadDataFromPath();
+            rp.setAcceptContent(user);
+            writeSocket(rp.toByteArray());
+        }
+    }
+    if(!err.isEmpty())
+        emit error(err);
 }

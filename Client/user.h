@@ -9,15 +9,17 @@ class User : public QObject
 
     Q_PROPERTY(QString name READ name WRITE setName)
 
-    Q_PROPERTY(QString account READ account)
+    Q_PROPERTY(QString account READ account WRITE setAccount)
 
     Q_PROPERTY(QString avatarPath READ avatarPath WRITE setAvatarPath)
 
     Q_PROPERTY(QString describe READ describe WRITE setDescribe)
 
     Q_PROPERTY(QString password READ password WRITE setPassword)
+
+    Q_PROPERTY(int isgroup READ isGroup WRITE setIsGroup)
 public:
-    explicit User(QObject *parent = nullptr):QObject(parent){}
+    explicit User(QObject *parent = nullptr):QObject(parent){m_isgroup = 0;}
 
     User(const QJsonObject &json);
 
@@ -50,7 +52,7 @@ public:
         return m_avatarPath;
     }
     void setAvatarPath(const QString &avatarPath){
-        m_avatarPath = QString(avatarPath).replace('\\', '/');
+        m_avatarPath = QString(avatarPath).replace('\\', '/').remove("file:///");
     }
 
     QString account() const{
@@ -70,6 +72,14 @@ public:
 
     QJsonObject toJsonObject() const;
 
+    int isGroup() const{
+        return m_isgroup;
+    }
+
+    void setIsGroup(int isgroup){
+        m_isgroup = isgroup;
+    }
+
 signals:
 
 private:
@@ -81,6 +91,8 @@ private:
     QString m_password;
     QString m_avatarPath;
     QString m_avatarData;
+    int m_isgroup;
+
 };
 
 #endif // USER_H

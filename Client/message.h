@@ -124,6 +124,8 @@ public:
 
     QJsonObject toJsonObject() const;
 
+
+
 signals:
 
 private:  
@@ -136,6 +138,7 @@ private:
     int m_fileIndex;
     QString m_authur;
     QString m_recipient;
+
 };
 
 #endif // MESSAGE_H

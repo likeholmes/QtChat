@@ -58,13 +58,14 @@ Page {
 
                 onClicked: {
                     client.dealLogin(accountInput.text, passwordInput.text);
-
+                    //client.test()
                 }
             }
 
             Button {
                 id: registerButton
                 text: "注册"
+                onClicked: root.StackView.view.push("qrc:/RegisterPage.qml")
             }
         }
 

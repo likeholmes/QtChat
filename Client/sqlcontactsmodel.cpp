@@ -12,6 +12,7 @@ static void createTable()
     if (QSqlDatabase::database().tables().contains(contactsTableName))
         return;
     QSqlQuery query;
+    //query.exec("DROP TABLE IF EXISTS 'contacts'");
     if (!query.exec("CREATE TABLE 'contacts' ("
                         "'account' TEXT NOT NULL ,"
                         "'name' TEXT NOT NULL ,"
@@ -76,19 +77,21 @@ QVariant SqlContactsModel::data(const QModelIndex &idx, int role) const
     submitAll();
 }*/
 
-void SqlContactsModel::addFriend(const User &user)
+void SqlContactsModel::addFriend(User *user)
 {
     QSqlRecord newRecord = record();
-    newRecord.setValue("account", user.account());
-    newRecord.setValue("name", user.name());
-    newRecord.setValue("avatar", user.avatarPath());
-    //newRecord.setValue("isgroup", );
-    newRecord.setValue("describe", user.describe());
-
+    newRecord.setValue("account", user->account());
+    newRecord.setValue("name", user->name());
+    newRecord.setValue("avatar", user->avatarPath());
+    newRecord.setValue("isgroup", user->isGroup());
+    newRecord.setValue("describe", user->describe());
+    qDebug() << "test addFriend";
     if(!insertRecord(rowCount(), newRecord)){
         qWarning() << "Failed to add Friend:" << lastError().text();
         return;
     }
 
-    submitAll();
+    if(!submitAll()){
+        qWarning() << "Failed to submit friend" << lastError().text();
+    }
 }
