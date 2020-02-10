@@ -85,7 +85,7 @@ void SqlContactsModel::addFriend(User *user)
     newRecord.setValue("avatar", user->avatarPath());
     newRecord.setValue("isgroup", user->isGroup());
     newRecord.setValue("describe", user->describe());
-    qDebug() << "test addFriend";
+    qDebug() << "test addFriend "+user->name();
     if(!insertRecord(rowCount(), newRecord)){
         qWarning() << "Failed to add Friend:" << lastError().text();
         return;

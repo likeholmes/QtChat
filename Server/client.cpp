@@ -59,7 +59,8 @@ void Client::login()
     QString err;
     bool loginsuccess = false;
     if(!query.exec(sql)){
-        err = query.lastError().text();
+        err = "执行查询用户表出错";
+        qDebug()<<query.lastError();
         rp.setResponse(Response::FAILURE);
     }else{
         if(query.next()){  //找到用户之后；颁发某种通行证;
@@ -70,7 +71,9 @@ void Client::login()
             user.setName(query.value("name").toString());
             user.setAccount(user.account());
             //两个表联合查询头像地址，获取头像
+            qDebug()<<"LOGIN";
             user.setAvatarPath(query.value("path").toString());
+            qDebug()<<"LOGIN";
             user.loadDataFromPath();//将数据存储到user中，这一步有可能出错
             rp.setResponse(Response::SUCCESS);
             rp.setAuthur(user);
@@ -295,7 +298,7 @@ void Client::sendMsg()
             content = QString().setNum(fileIndex);
         }
         //加到数据库中
-        QSqlRecord newRecord;
+        QSqlRecord newRecord = model.record();
         newRecord.setValue("authur", getId(msg.authur()));
         newRecord.setValue("recipient", getId(msg.recipient()));
         newRecord.setValue("type", msg.type());
@@ -303,10 +306,12 @@ void Client::sendMsg()
         newRecord.setValue("content", content);
         newRecord.setValue("received", 0);
         if(!model.insertRecord(model.rowCount(), newRecord)){
-            err = "未成功将消息存到对话表中";
+            err = "未成功将消息插入对话表中";
+            qDebug()<<model.lastError();
             rp.setResponse(Response::FAILURE);
         }else if(!model.submitAll()){
-            err = "未成功将消息存到对话表中";
+            err = "未成功将消息提交到对话表中";
+            qDebug()<<model.lastError();
             rp.setResponse(Response::FAILURE);
         }
     }
@@ -348,12 +353,12 @@ void Client::receiveMsg()
             }
             rp.setMsgContent(msg);
             rp.setResponse(Response::SUCCESS);
-            m_socket->write(rp.toByteArray());
             //修改当前记录的标志位
             aRecord.setValue("received", 1);
             //aRecord.setGenerated("received", false);
             if(!model.setRecord(i, aRecord)){
                 err = "未成功更新接收消息的标志位";
+                rp.setResponse(Response::FAILURE);
             }
             writeSocket(rp.toByteArray());
         }
@@ -525,10 +530,12 @@ void Client::writeSocket(const QByteArray &bytes)
     m_socket->write(bytes);
     if(bytes.size() % 65536 == 0)
         m_socket->write(end);
+    m_socket->flush();
 }
 
 void Client::accept()
 {
+    qDebug()<<"accept:"<<m_token;
     QString sql = "SELECT u.name, u.describe, u.account, u.isgroup , u.path "
                   "FROM (SELECT * FROM contacts WHERE user2 = " + m_token +
                   ") c "
@@ -544,18 +551,23 @@ void Client::accept()
     rp.setResponse(Response::SUCCESS);
     if(!query.exec(sql)){
         qDebug() << query.lastError();
-        err = "未成功执行查询语句";
+        err = "接受未成功执行查询语句";
     }else{
         while(query.next()){
             User user;
             user.setName(query.value("name").toString());
+            qDebug()<<"accept:接收的朋友名称："<<user.name();
             user.setAccount(query.value("account").toString());
             user.setIsGroup(query.value("isgroup").toInt());
             user.setDescribe(query.value("describe").toString());
+            //qDebug()<<"accept";
             user.setAvatarPath(query.value("path").toString());
+            //qDebug()<<"accept";
             user.loadDataFromPath();
             rp.setAcceptContent(user);
-            writeSocket(rp.toByteArray());
+            QByteArray bytes = rp.toByteArray();
+            qDebug()<<"accpet:一个联系人:"<<bytes.size();
+            writeSocket(bytes);
         }
     }
     if(!err.isEmpty())

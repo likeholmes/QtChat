@@ -152,11 +152,11 @@ void Client::responseHandle()
     qDebug() << bytes.size();
     m_data.clear();
     Response res(bytes);
-    qDebug() << "处理响应";
+
     if(res.isNull()){
         return;
     }
-
+    qDebug() << "处理响应";
     switch (res.action()) {
     case Response::Login:
         if(res.response() == Response::SUCCESS){
