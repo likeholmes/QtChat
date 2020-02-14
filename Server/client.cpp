@@ -7,6 +7,7 @@
 #include <QDir>
 #include <QScopedPointer>
 #include <QSqlError>
+#include <QDataStream>
 
 static QString resourceBasePath = "D:/QtProject/chatAll/Server/resource/";
 
@@ -90,8 +91,9 @@ void Client::login()
     //检查是否有离线消息
     if(loginsuccess){
         err = user.account() + "登录成功";
-        receiveMsg();
+        //qDebug()<<"接收完数据后";
         accept();
+        receiveMsg();
     }
     if(!err.isEmpty())
         emit error(err);
@@ -331,10 +333,12 @@ void Client::receiveMsg()
     model.setFilter(QString("received = 0 AND (recipient = %1 OR authur = %1)")
                     .arg(getId(m_user.account()))); //这样直接传值很容易出错
     model.setEditStrategy(QSqlTableModel::OnManualSubmit);
+    QList<Message> list;
+    Response rp;
+    rp.setAction(Response::Receive);
+    rp.setResponse(Response::FAILURE);
     if(model.select()){
         for(int i = 0; i < model.rowCount(); ++i){
-            Response rp;
-            rp.setAction(Response::Receive);
             Message msg;
             QSqlRecord aRecord = model.record(i);
             msg.setType(Message::Type(aRecord.value("type").toInt()));
@@ -351,22 +355,27 @@ void Client::receiveMsg()
                 msg.dealFile();
                 //不用发送大文件
             }
-            rp.setMsgContent(msg);
-            rp.setResponse(Response::SUCCESS);
+            //rp.setMsgContent(msg);
             //修改当前记录的标志位
             aRecord.setValue("received", 1);
             //aRecord.setGenerated("received", false);
             if(!model.setRecord(i, aRecord)){
                 err = "未成功更新接收消息的标志位";
-                rp.setResponse(Response::FAILURE);
+            }else {
+                list << msg;
             }
-            writeSocket(rp.toByteArray());
         }
         if(!model.submitAll())
             err = "接收信息大的修改未提交成功";
+        else{
+            rp.setResponse(Response::SUCCESS);
+            rp.setMsgContents(list);
+        }
     }else{
         err = "对话表加载失败";
     }
+    qDebug() << rp.toByteArray().size();
+    writeSocket(rp.toByteArray());
     if(!err.isEmpty())
         emit error(err);
 }
@@ -527,9 +536,16 @@ int Client::getFileId(int fileIndex)
 
 void Client::writeSocket(const QByteArray &bytes)
 {
-    m_socket->write(bytes);
-    if(bytes.size() % 65536 == 0)
-        m_socket->write(end);
+    QByteArray data;
+    QDataStream out(&data, QIODevice::WriteOnly);
+    //m_socket->write(bytes);
+    out << bytes;
+    if(bytes.size() > 0 && bytes.size() % 65536 == 0){
+        //m_socket->write(end);
+        out << end;
+        //qDebug()<<"end";
+    }
+    m_socket->write(data);
     m_socket->flush();
 }
 
@@ -549,9 +565,11 @@ void Client::accept()
     rp.setAuthur(m_user);
     rp.setAction(Response::Accept);
     rp.setResponse(Response::SUCCESS);
+    QList<User> list;
     if(!query.exec(sql)){
         qDebug() << query.lastError();
         err = "接受未成功执行查询语句";
+        rp.setResponse(Response::FAILURE);
     }else{
         while(query.next()){
             User user;
@@ -564,12 +582,12 @@ void Client::accept()
             user.setAvatarPath(query.value("path").toString());
             //qDebug()<<"accept";
             user.loadDataFromPath();
-            rp.setAcceptContent(user);
-            QByteArray bytes = rp.toByteArray();
-            qDebug()<<"accpet:一个联系人:"<<bytes.size();
-            writeSocket(bytes);
+            list << user;
         }
+        rp.setAcceptContent(list);
     }
+    qDebug() << rp.toByteArray().size();
+    writeSocket(rp.toByteArray());
     if(!err.isEmpty())
         emit error(err);
 }

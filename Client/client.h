@@ -6,6 +6,7 @@
 #include "user.h"
 #include "message.h"
 #include <QQmlListProperty>
+#include <QDataStream>
 
 class Client: public QObject
 {
@@ -86,6 +87,8 @@ signals:
     void downloadSuccess();
 
     void dataCome();
+
+    void acceptSuccess();
 
 private:
     QByteArray rawData(const QString &path);

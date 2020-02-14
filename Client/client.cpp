@@ -25,8 +25,9 @@ Client::Client(QObject *parent):
     //connect(&socket, SIGNAL(QTcpSocket::error()), this, &Client::dealError);
     //connect(socket, &QTcpSocket::readyRead, this, &Client::responseHandle);
     //connect(&socket, &QTcpSocket::disconnected, &socket, &QTcpSocket::deleteLater);
-    connect(socket, &QTcpSocket::readyRead, this, &Client::dealData);
+    connect(socket, &QIODevice::readyRead, this, &Client::dealData);
     connect(this, &Client::dataCome, this, &Client::responseHandle);
+
 
     qDebug()<<"连接到服务器";
 }
@@ -132,9 +133,10 @@ void Client::dealDownload(const QString& path)
 
 void Client::dealData()
 {
-    QByteArray end = QString("end").toUtf8();
+    /*QByteArray end = QString("end").toUtf8();
     QByteArray bytes = socket->readAll();
     int byteSize = bytes.size();
+    //qDebug() << "end:" << end.size();
     qDebug()<< "块大小"<<byteSize;
     if(byteSize > 0 && byteSize < 65536){
         if(bytes != end){
@@ -143,6 +145,22 @@ void Client::dealData()
         emit dataCome();
     }else if(byteSize == 65536){
         m_data.append(bytes);
+    }*/
+    qDebug() << "可获取的数据" << socket->bytesAvailable();
+    QDataStream in(socket);
+    bool status = false;
+    QByteArray bytes;
+    do{
+        if(status && bytes != m_data){
+            m_data = bytes;
+            emit dataCome();
+        }
+        in.startTransaction();
+        in >> bytes;
+    }while(socket->bytesAvailable()&&(status = in.commitTransaction()));
+    if(in.commitTransaction() && bytes != m_data){
+        m_data = bytes;
+        emit dataCome();
     }
 }
 
@@ -217,7 +235,9 @@ void Client::responseHandle()
             //直接加到数据库中...
             qDebug()<<"处理接收";
             SqlConversationModel model;
-            model.sendMessage(res.msgContent());
+            QList<Message> list = res.msgContents();
+            for(int i = 0; i < list.size(); ++i)
+                model.sendMessage(list.at(i));
             emit msgReceived(); //新加的消息会有红点显示
         }else{
 
@@ -238,9 +258,14 @@ void Client::responseHandle()
         if(res.response() == Response::SUCCESS){
             qDebug()<<"处理接受";
             SqlContactsModel model;
-            User user = res.acceptContent();
-            user.saveAvatar(resourceBasePath);
-            model.addFriend(&user);
+            QList<User> list = res.acceptContent();
+            for(int i = 0; i < list.size(); ++i)
+            {
+                User user = list.at(i);
+                user.saveAvatar(resourceBasePath);
+                model.addFriend(&user);
+            }
+
         }
     default:
         break;

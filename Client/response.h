@@ -41,17 +41,9 @@ public:
         m_isNull = false;
     }
 
-    User acceptContent() const{
-        User user;
-        if(m_json.contains("acceptContent")){
-            user = m_json["acceptContent"].toObject();
-        }
-        return user;
-    }
+    QList<User> acceptContent() const;
 
-    void setAcceptContent(const User& user){
-        m_json["acceptContent"] = user.toJsonObject();
-    }
+    void setAcceptContent(const QList<User>& users);
 
     Action action() const{
         if(m_json.contains("action"))
@@ -75,6 +67,9 @@ public:
 
     Message msgContent() const;
     void setMsgContent(const Message &msg);
+
+    QList<Message> msgContents() const;
+    void setMsgContents(const QList<Message>&list);
 
     QByteArray toByteArray() const;
 
