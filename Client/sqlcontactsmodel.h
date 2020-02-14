@@ -16,6 +16,8 @@ public:
 
     Q_INVOKABLE void addFriend(User *user);
 
+    Q_INVOKABLE void flush();
+
 };
 
 #endif // SQLCONTACTSMODEL_H

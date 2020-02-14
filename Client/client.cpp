@@ -265,7 +265,7 @@ void Client::responseHandle()
                 user.saveAvatar(resourceBasePath);
                 model.addFriend(&user);
             }
-
+            emit acceptSuccess();
         }
     default:
         break;

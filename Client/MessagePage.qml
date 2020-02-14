@@ -24,7 +24,12 @@ Page{
             text: conversionWith.name
         }
     }
-
+    //存疑
+    Connections {
+        target: client
+        onMsgReceived: messagelist.model.recipient = conversionWith.account
+    }
+    //存疑
     ColumnLayout {
         id: messageColumn
         anchors.fill: parent
@@ -34,6 +39,7 @@ Page{
             model: SqlConversationModel{
                 recipient: conversionWith.account
             }
+
             Layout.fillHeight: true
             Layout.fillWidth: true
             Layout.margins: rowPane.leftPadding
@@ -45,6 +51,7 @@ Page{
                 property bool sentByMe: model.sender !== conversionWith.account
                 property bool isFileExist: model.type !== Message.Text && model.fileExist(model.content)
                 anchors.right: sentByMe ? parent.right : undefined
+
                 Row {
                     id: itemRow
                     anchors.right: sentByMe ? parent.right : undefined

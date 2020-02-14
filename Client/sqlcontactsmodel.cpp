@@ -9,10 +9,10 @@ static const char *contactsTableName = "contacts";
 
 static void createTable()
 {
-    /*if (QSqlDatabase::database().tables().contains(contactsTableName))
-        return;*/
+    if (QSqlDatabase::database().tables().contains(contactsTableName))
+        return;
     QSqlQuery query;
-    query.exec("DROP TABLE IF EXISTS 'contacts'");
+    //query.exec("DROP TABLE IF EXISTS 'contacts'");
     if (!query.exec("CREATE TABLE 'contacts' ("
                         "'account' TEXT NOT NULL ,"
                         "'name' TEXT NOT NULL ,"
@@ -94,4 +94,9 @@ void SqlContactsModel::addFriend(User *user)
     if(!submitAll()){
         qWarning() << "Failed to submit friend" << lastError().text();
     }
+}
+
+void SqlContactsModel::flush()
+{
+    select();
 }

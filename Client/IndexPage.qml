@@ -159,6 +159,12 @@ Page {
 
             currentIndex: tabs.currentIndex
 
+            Connections{
+                target: client
+                onAcceptSuccess: contact_list.model.flush();
+            }
+
+
             ListView {
                 id: messageslist
                 model: 20
@@ -173,8 +179,11 @@ Page {
 
             ListView {
                 id: contact_list
+
                 model: SqlContactsModel{}
+
                 delegate: ItemDelegate {
+
                     width: parent.width
                     height: 60
 

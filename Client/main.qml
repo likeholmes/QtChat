@@ -14,8 +14,7 @@ ApplicationWindow {
     StackView {
         id: stackView
         anchors.fill: parent
-        // @disable-check M300
-        initialItem: LoginPage {}
+        initialItem: LoginPage{}
     }
 }
 
