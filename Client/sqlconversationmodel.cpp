@@ -16,14 +16,14 @@ static void createTable()
 
     QSqlQuery query;
     //query.exec("DROP TABLE IF EXISTS 'conversation'");
-    if (!query.exec("CREATE TABLE 'conversation' ("
-                    "'id' INTEGER PRIMARY KEY AUTOINCREMENT,"
-                    "'type' INTEGER NOT NULL,"
-                    "'content' TEXT NOT NULL,"
-                    "'sender' TEXT NOT NULL,"
-                    "'receiver' TEXT NOT NULL,"
-                    "'time' TEXT NOT NULL, "
-                    "FOREIGN KEY('receiver') REFERENCES contacts ( account )"
+    if (!query.exec("CREATE TABLE `conversation` ("
+                    "`id` INT NOT NULL AUTO_INCREMENT,"
+                    "`type` INT NOT NULL,"
+                    "`content` TEXT NOT NULL,"
+                    "`sender` TEXT NOT NULL,"
+                    "`receiver` TEXT NOT NULL,"
+                    "`time` TEXT NOT NULL, "
+                    "PRIMARY KEY (`id`)"
                     ")"))
     {
         qFatal("Failed to query database: %s", qPrintable(query.lastError().text()));
@@ -52,9 +52,9 @@ QString SqlConversationModel::recipient() const
 
 void SqlConversationModel::setRecipient(const QString &recipient)
 {
-    if (m_recipient == recipient)
+    /*if (m_recipient == recipient)
         return;
-
+    */
     m_recipient = recipient;
     //目前只适用于非群聊
     const QString filterString = QString("sender='%1' OR receiver='%1'").arg(recipient);
@@ -94,26 +94,6 @@ QVariant SqlConversationModel::data(const QModelIndex &idx, int role) const
     return result.value(role - Qt::UserRole);
 }
 
-/*void SqlConversationModel::sendMessage(const QString &type, const QString &content,
-                                       const QString &sender, const QString &receiver)
-{
-    const QString timeStamp = QDateTime::currentDateTime().toString(Qt::ISODate);
-
-    QSqlRecord newRecord = record();
-    newRecord.setValue("type", type);
-    newRecord.setValue("content", content);
-    newRecord.setValue("sender", sender);
-    newRecord.setValue("receiver", receiver);
-    newRecord.setValue("time", timeStamp);
-
-    if(!insertRecord(rowCount(), newRecord)){
-        qWarning() << "Failed to send message:" << lastError().text();
-        return;
-    }
-
-    submitAll();
-}*/
-
 void SqlConversationModel::sendMessage(const Message &msg)
 {
     QString timeStamp = QDateTime::currentDateTime().toString(Qt::ISODate);
@@ -121,18 +101,23 @@ void SqlConversationModel::sendMessage(const Message &msg)
     QSqlRecord newRecord = record();
     newRecord.setValue("type", msg.type());
     newRecord.setValue("content", msg.textMsg());
+    qDebug()<<"检查authur"<<msg.authur();
     newRecord.setValue("sender", msg.authur());
+    qDebug()<<"检查recipient"<<msg.recipient();
     newRecord.setValue("receiver", msg.recipient());
-    if(msg.timeStamp() != nullptr)
+    if(!msg.timeStamp().isEmpty())
         timeStamp = msg.timeStamp();
     newRecord.setValue("time", timeStamp);
 
     if(!insertRecord(rowCount(), newRecord)){
-        qWarning() << "Failed to send message:" << lastError().text();
+        qWarning() << "Failed to insert message:" << lastError().text();
         return;
     }
 
-    submitAll();
+    if(!submitAll()){
+        qWarning() << "Failed to submit message:" << lastError().text();
+        return;
+    }
 }
 
 void SqlConversationModel::sendMessage(Message *msg)

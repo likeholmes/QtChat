@@ -65,7 +65,7 @@ private:
 
     Message::Type getType(int fileIndex);
 
-    QString filePath(int fileIndex);
+    QString getPath(int fileIndex);
 
     QString getAccount(int id);
 

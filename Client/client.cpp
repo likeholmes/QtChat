@@ -237,7 +237,11 @@ void Client::responseHandle()
             SqlConversationModel model;
             QList<Message> list = res.msgContents();
             for(int i = 0; i < list.size(); ++i)
-                model.sendMessage(list.at(i));
+            {
+                Message msg = list.at(i);
+                qDebug() << "client:authur "<<msg.authur();
+                model.sendMessage(&msg);
+            }
             emit msgReceived(); //新加的消息会有红点显示
         }else{
 

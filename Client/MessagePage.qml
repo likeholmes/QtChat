@@ -69,6 +69,7 @@ Page{
                         width: 160
                         height: 160
                         visible: model.type !== Message.Text
+                        enabled: model.type === Message.Text
                         source:  model.type === Message.Picture && isFileExsit ? "file:/" + model.content : "默认缩略图"
 
                         Button {

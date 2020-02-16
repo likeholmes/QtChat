@@ -13,13 +13,15 @@ static void createTable()
         return;
     QSqlQuery query;
     //query.exec("DROP TABLE IF EXISTS 'contacts'");
-    if (!query.exec("CREATE TABLE 'contacts' ("
-                        "'account' TEXT NOT NULL ,"
-                        "'name' TEXT NOT NULL ,"
-                        "'avatar' TEXT NOT NULL ,"
-                        "'isgroup' INTEGER NOT NULL ,"
-                        "'describe' TEXT DEFAULT NULL ,"
-                        "PRIMARY KEY ('account') )"
+    if (!query.exec("CREATE TABLE `contacts` ("
+                        "`id` int NOT NULL AUTO_INCREMENT, "
+                        "`account` TEXT NOT NULL,"
+                        "`name` TEXT NOT NULL,"
+                        "`avatar` TEXT NOT NULL,"
+                        "`isgroup` INT NOT NULL,"
+                        "`describe` TEXT NULL,"
+                        "PRIMARY KEY (`id`),"
+                        "UNIQUE INDEX (`account`(20)))"
                     )){
         qFatal("Failed to query database: %s", qPrintable(query.lastError().text()));
     }
@@ -40,11 +42,11 @@ SqlContactsModel::SqlContactsModel(QObject *parent):
 QHash<int, QByteArray> SqlContactsModel::roleNames() const
 {
     QHash<int, QByteArray> names;
-    names[Qt::UserRole] = "account";
-    names[Qt::UserRole + 1] = "name";
-    names[Qt::UserRole + 2] = "avatar";
-    names[Qt::UserRole + 3] = "describe";
-    names[Qt::UserRole + 4] = "isgroup";
+    names[Qt::UserRole + 1] = "account";
+    names[Qt::UserRole + 2] = "name";
+    names[Qt::UserRole + 3] = "avatar";
+    names[Qt::UserRole + 4] = "describe";
+    names[Qt::UserRole + 5] = "isgroup";
 
     return names;
 }
@@ -58,24 +60,6 @@ QVariant SqlContactsModel::data(const QModelIndex &idx, int role) const
     //qDebug()<< sqlRecord.value(role - Qt::UserRole);
     return sqlRecord.value(role - Qt::UserRole);
 }
-
-/*void SqlContactsModel::addFriend(const QString &account, const QString &name,
-                                 const QString &avatar, const int isgroup, const QString &describe)
-{
-    QSqlRecord newRecord = record();
-    newRecord.setValue("account", account);
-    newRecord.setValue("name", name);
-    newRecord.setValue("avatar", avatar);
-    newRecord.setValue("isgroup", isgroup);
-    newRecord.setValue("describe", describe);
-
-    if(!insertRecord(rowCount(), newRecord)){
-        qWarning() << "Failed to send message:" << lastError().text();
-        return;
-    }
-
-    submitAll();
-}*/
 
 void SqlContactsModel::addFriend(User *user)
 {

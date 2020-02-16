@@ -7,11 +7,11 @@ class User : public QObject
 {
     Q_OBJECT
 
-    Q_PROPERTY(QString name READ name WRITE setName)
+    Q_PROPERTY(QString name READ name WRITE setName NOTIFY nameChanged)
 
-    Q_PROPERTY(QString account READ account WRITE setAccount)
+    Q_PROPERTY(QString account READ account WRITE setAccount NOTIFY accountChanged)
 
-    Q_PROPERTY(QString avatarPath READ avatarPath WRITE setAvatarPath)
+    Q_PROPERTY(QString avatarPath READ avatarPath WRITE setAvatarPath NOTIFY avatarChanged)
 
     Q_PROPERTY(QString describe READ describe WRITE setDescribe)
 
@@ -81,6 +81,11 @@ public:
     }
 
 signals:
+    void nameChanged();
+
+    void accountChanged();
+
+    void avatarChanged();
 
 private:
     QString getFileName();

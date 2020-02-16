@@ -10,28 +10,19 @@
 #include "sqlconversationmodel.h"
 #include "client.h"
 #include "message.h"
-static void connectToDatabase()
+static bool connectToDatabase()
 {
-    QSqlDatabase database = QSqlDatabase::database();
-    if (!database.isValid())
-    {
-        database = QSqlDatabase::addDatabase("QSQLITE");
-        if (!database.isValid())
-                qFatal("Cannot add database: %s", qPrintable(database.lastError().text()));
+    QSqlDatabase db = QSqlDatabase::addDatabase("QMYSQL");
+    const QString dataName = "client";
+    db.setHostName("127.0.0.1");
+    db.setUserName("root");
+    db.setPassword("123456");
+    db.setDatabaseName(dataName);
+    if(!db.open()){
+        qFatal("Cannot open database: %s", qPrintable(db.lastError().text()));
+        return 1;
     }
-
-    const QDir writeDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-    if (!writeDir.mkpath("."))
-        qFatal("Failed to create writable directory at %s", qPrintable(writeDir.absolutePath()));
-
-    // Ensure that we have a writable location on all devices.
-    const QString fileName = writeDir.absolutePath() + "/chat-database.sqlite3";
-    // When using the SQLite driver, open() will create the SQLite database if it doesn't exist.
-    database.setDatabaseName(fileName);
-    if (!database.open()) {
-        qFatal("Cannot open database: %s", qPrintable(database.lastError().text()));
-        QFile::remove(fileName);
-    }
+    return 0;
 }
 
 int main(int argc, char *argv[])
@@ -46,7 +37,10 @@ int main(int argc, char *argv[])
     qmlRegisterType<Message>("io.qtchat.mytype", 1, 0, "Message");
     qmlRegisterType<User>("io.qtchat.mytype", 1, 0, "User");
 
-    connectToDatabase();
+    if(connectToDatabase()){
+        return 1;
+    }
+
     Client client;
     QQmlApplicationEngine engine;
     const QUrl url(QStringLiteral("qrc:/main.qml"));

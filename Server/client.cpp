@@ -148,7 +148,7 @@ void Client::doRegister()
             }
         }else{
             qDebug() << "用户未上传头像";
-            user.setAvatarPath(filePath(0));
+            user.setAvatarPath(getPath(0));
             user.loadDataFromPath();
         }
         newRecord.setValue("avatar", avatarId);
@@ -327,6 +327,7 @@ void Client::sendMsg()
 
 void Client::receiveMsg()
 {
+    qDebug() << "receive ---";
     QString err;
     QSqlTableModel model;
     model.setTable("conversations");
@@ -349,16 +350,13 @@ void Client::receiveMsg()
                 msg.setTextMsg(aRecord.value("content").toString());
             }else{
                 int index = aRecord.value("content").toInt();
-                QString path = filePath(index);
+                QString path = getPath(index);
                 msg.setFilePath(path);
                 msg.setFileIndex(index);
                 msg.dealFile();
                 //不用发送大文件
             }
-            //rp.setMsgContent(msg);
-            //修改当前记录的标志位
             aRecord.setValue("received", 1);
-            //aRecord.setGenerated("received", false);
             if(!model.setRecord(i, aRecord)){
                 err = "未成功更新接收消息的标志位";
             }else {
@@ -378,6 +376,7 @@ void Client::receiveMsg()
     writeSocket(rp.toByteArray());
     if(!err.isEmpty())
         emit error(err);
+    qDebug() << "receive +++";
 }
 
 void Client::download(int index)
@@ -388,7 +387,7 @@ void Client::download(int index)
     Message msg;
     //还是需要标明数据的结尾？
     //为什么：可能获取的数据是另一个请求的数据；
-    QFile file(filePath(index));
+    QFile file(getPath(index));
     if(file.exists()){
         msg.setType(getType(index));
         msg.setFileIndex(index);
@@ -444,8 +443,9 @@ void Client::upload(Message &msg)
 
 }
 
-QString Client::filePath(int fileIndex)
+QString Client::getPath(int fileIndex)
 {
+    qDebug() << "getPath---";
     QSqlQuery query;
     QString err;
     QString res;
@@ -457,9 +457,10 @@ QString Client::filePath(int fileIndex)
     }else{
         err = "不是有效的fileIndex";
     }
-    return res;
     if(!err.isEmpty())
         emit error(err);
+    qDebug() << "getPath+++";
+    return res;
 }
 
 int Client::getId(const QString &account)
@@ -475,9 +476,10 @@ int Client::getId(const QString &account)
     }else{
         err = "不是有效的account";
     }
-    return res;
+
     if(!err.isEmpty())
         emit error(err);
+    return res;
 }
 
 QString Client::getAccount(int id)
@@ -489,13 +491,14 @@ QString Client::getAccount(int id)
     {
         err = "执行查询用户账号失败";
     }else if(query.next()){
-        res = query.value("path").toString();
+        res = query.value("account").toString();
     }else{
         err = "不是有效的id";
     }
-    return res;
+
     if(!err.isEmpty())
         emit error(err);
+    return res;
 }
 
 Message::Type Client::getType(int fileIndex)
@@ -511,9 +514,10 @@ Message::Type Client::getType(int fileIndex)
     }else{
         err = "不是有效的fileIndex";
     }
-    return res;
+
     if(!err.isEmpty())
         emit error(err);
+    return res;
 }
 
 int Client::getFileId(int fileIndex)
@@ -529,9 +533,10 @@ int Client::getFileId(int fileIndex)
     }else{
         err = "不是有效的fileIndex";
     }
-    return res;
+
     if(!err.isEmpty())
         emit error(err);
+    return res;
 }
 
 void Client::writeSocket(const QByteArray &bytes)
