@@ -22,6 +22,8 @@ Client::Client(QObject *parent):
     typeMap.insert(Message::File, "file");
     socket = new QTcpSocket();
     socket->connectToHost("localhost", 1031);
+    in.setDevice(socket);
+    chunk = 1048576;
     //connect(&socket, SIGNAL(QTcpSocket::error()), this, &Client::dealError);
     //connect(socket, &QTcpSocket::readyRead, this, &Client::responseHandle);
     //connect(&socket, &QTcpSocket::disconnected, &socket, &QTcpSocket::deleteLater);
@@ -50,7 +52,7 @@ void Client::dealLogin(const QString &account, const QString &password)
     request.setAction(Request::Login);
     request.setAuthur(user);
 
-    socket->write(request.toByteArray());
+    writeSocket(request.toByteArray());
 }
 
 void Client::dealRegister(User *user)
@@ -62,8 +64,8 @@ void Client::dealRegister(User *user)
     request.setToken(m_token);
     newUser.loadDataFromPath();
     request.setAuthur(newUser);
-    socket->write(request.toByteArray());
-    qDebug()<< "发出注册请求";
+    writeSocket(request.toByteArray());
+    //qDebug()<< "发出注册请求";
 }
 
 void Client::dealSearch(const QString &searchContent)
@@ -76,7 +78,7 @@ void Client::dealSearch(const QString &searchContent)
     request.setAuthur(*m_user);
     request.setSearchContent(searchContent);
 
-    socket->write(request.toByteArray());
+    writeSocket(request.toByteArray());
 }
 
 void Client::dealAddFriend(const QString &account)
@@ -89,15 +91,12 @@ void Client::dealAddFriend(const QString &account)
     request.setAuthur(*m_user);
     request.setAddContent(account);
 
-    socket->write(request.toByteArray());
+    writeSocket(request.toByteArray());
 }
 
 void Client::dealSendMsg(Message *msg)
 {
-    //socket->abort();
-
     Request request;
-    qint64 chunk = 65536;
     Message newMsg(*msg);
     newMsg.setTimeStamp();
     newMsg.dealFile(); //将小文件数据转成文字信息
@@ -107,7 +106,7 @@ void Client::dealSendMsg(Message *msg)
     request.setAuthur(*m_user);
     request.setToken(m_token);
 
-    socket->write(request.toByteArray()); //若发送的是一个大文件将先仅发送一个头信息
+    writeSocket(request.toByteArray()); //若发送的是一个大文件将先仅发送一个头信息
     if(newMsg.fileSize() > chunk)
         upload(newMsg.filePath());
 }
@@ -128,26 +127,11 @@ void Client::dealDownload(const QString& path)
 
     request.setDownloadIndex(fileIndex);
 
-    socket->write(request.toByteArray());
+    writeSocket(request.toByteArray());
 }
 
 void Client::dealData()
 {
-    /*QByteArray end = QString("end").toUtf8();
-    QByteArray bytes = socket->readAll();
-    int byteSize = bytes.size();
-    //qDebug() << "end:" << end.size();
-    qDebug()<< "块大小"<<byteSize;
-    if(byteSize > 0 && byteSize < 65536){
-        if(bytes != end){
-            m_data.append(bytes);
-        }
-        emit dataCome();
-    }else if(byteSize == 65536){
-        m_data.append(bytes);
-    }*/
-    qDebug() << "可获取的数据" << socket->bytesAvailable();
-    QDataStream in(socket);
     bool status = false;
     QByteArray bytes;
     do{
@@ -156,7 +140,8 @@ void Client::dealData()
             emit dataCome();
         }
         in.startTransaction();
-        in >> bytes;
+        in >> bytes; //数据不完整的话接收的值为0
+
     }while(socket->bytesAvailable()&&(status = in.commitTransaction()));
     if(in.commitTransaction() && bytes != m_data){
         m_data = bytes;
@@ -274,61 +259,41 @@ void Client::responseHandle()
     default:
         break;
     }
-    //socket->flush();
-}
-
-QByteArray Client::rawData(const QString &path)
-{
-
-    QByteArray bytes;
-    QFile file(path);
-    if(!file.open(QIODevice::ReadOnly)){
-        //出现错误
-    }
-    bytes = file.readAll();
-    file.close();
-    return bytes;
 }
 
 void Client::upload(const QString &path)
 {
     QFile file(path);
     file.open(QIODevice::ReadOnly);
-    qint64 chunk = 65536;
-    const char* end = "file is end!";
+    //const char* end = "file is end!";
     //暂时不加结尾标识
     //注意加锁
-
+    int minChunk = 65536; //防止一次读取大文件
     while (!file.atEnd()) {
-        socket->write(file.read(chunk));
+        socket->write(file.read(minChunk));
     }
-
     //注意加锁
-    socket->write(end);
-
     file.close();
 }
 
 void Client::download(const Message &msg)
 {
-    //socket->flush();
     QString path = resourceBasePath + typeMap.at(msg.type()) + "/" + msg.fileName();
     QFile file(path);
     file.open(QIODevice::WriteOnly);
     //需要判断该文件是否存在
-    qint64 chunk = 65536;
-    const char* end = "file is end!";
-    //注意加锁
-    while (msg.fileSize() > chunk) {
-        QByteArray bytes = socket->read(chunk);
-        if(bytes != end){
+    if(!file.exists()){
+        //int minChunk = 65536;
+        qint64 toRead = msg.fileSize();
+        //注意加锁
+        while (toRead) {
+            QByteArray bytes = socket->readAll();
             file.write(bytes);
-        }else{
-            break;
+            toRead -= bytes.size();
         }
+        //注意加锁
+        file.close();
     }
-    //注意加锁
-    file.close();
 }
 
 QQmlListProperty<User> Client::searchContent() {
@@ -370,4 +335,12 @@ User* Client::searchUser(QQmlListProperty<User> *list, int idx)
 int Client::userCount(QQmlListProperty<User> *list)
 {
     return reinterpret_cast<Client*>(list->data)->userCount();
+}
+
+void Client::writeSocket(const QByteArray &bytes)
+{
+    QByteArray data;
+    QDataStream out(&data, QIODevice::WriteOnly);
+    out << bytes;
+    socket->write(data);
 }

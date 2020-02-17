@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QTcpSocket>
 #include <QFileInfo>
+#include <QDataStream>
 #include "user.h"
 #include "request.h"
 #include "response.h"
@@ -76,6 +77,8 @@ private:
     QString m_token;
     User m_user;
     QByteArray end;
+    QByteArray m_data;
+    QDataStream in;
 };
 
 #endif // CLIENT_H

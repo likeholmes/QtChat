@@ -7,7 +7,6 @@
 #include <QDir>
 #include <QScopedPointer>
 #include <QSqlError>
-#include <QDataStream>
 
 static QString resourceBasePath = "D:/QtProject/chatAll/Server/resource/";
 
@@ -19,6 +18,7 @@ Client::Client(QObject *parent) : QObject(parent)
 Client::Client(QTcpSocket *socket, QObject *parent):QObject(parent)
 {
     m_socket = socket;
+    in.setDevice(m_socket);
     end = QString("end").toUtf8();
     connect(m_socket, &QTcpSocket::disconnected, this, &Client::disconnect);
     connect(m_socket, &QTcpSocket::readyRead, this, &Client::nextPendingRequest);
@@ -32,15 +32,23 @@ void Client::disconnect(){
 void Client::nextPendingRequest()
 {
     //如果传来的数据是文件该怎么办，这些值该怎么处理？如果连起来处理呢
-    if(m_socket->bytesAvailable()){
-        qDebug() << "开始读取请求";
-        QByteArray bytes = m_socket->readAll();
-        //需判断bytes是否可以解析为request
-        //这些数据怎么释放呢
-        qDebug() << "请求读取完成，开始解析请求";
-        Request res(bytes);
-        qDebug() <<"请求解析完成";
-        m_request = res;
+    bool status = false;
+    QByteArray bytes;
+    do{
+        if(status && bytes != m_data){
+            m_data = bytes;
+            m_request = m_data;
+            m_data.clear();
+            emit newRequest();
+        }
+        in.startTransaction();
+        in >> bytes;
+
+    }while(m_socket->bytesAvailable()&&(status = in.commitTransaction()));
+    if(in.commitTransaction() && bytes != m_data){
+        m_data = bytes;
+        m_request = m_data;
+        m_data.clear();
         emit newRequest();
     }
 }
@@ -399,20 +407,18 @@ void Client::download(int index)
         qint64 chunk = 65536;
         //暂时不加结尾标识
         //注意加锁
-        m_socket->write(rp.toByteArray());
+        writeSocket(rp.toByteArray());
 
         while (!file.atEnd()) {
             m_socket->write(file.read(chunk));
         }
 
         //注意加锁
-        m_socket->write(end);
 
         file.close();
     }else{
         rp.setResponse(Response::FAILURE);
-        m_socket->write(rp.toByteArray());
-        m_socket->write(end);
+        writeSocket(rp.toByteArray());
     }
 }
 
@@ -421,26 +427,21 @@ void Client::upload(Message &msg)
     QStringList typeMap;
     typeMap[Message::File] = "file";
     typeMap[Message::Picture] = "picture";
-    QString path = resourceBasePath + typeMap.at(msg.type()) + "/" + msg.fileName(); //相对位置
-    msg.setFilePath(path);
+    QString path = resourceBasePath + typeMap.at(msg.type()) + "/" + msg.fileName();
     QFile file(path);
     if(!file.exists()){
         file.open(QIODevice::WriteOnly);
         //需要判断该文件是否存在
-        qint64 chunk = 65536;
+        qint64 toRead = msg.fileSize();
         //注意加锁
-        while (msg.fileSize() > chunk) {
-            QByteArray bytes = m_socket->read(chunk);
-            if(bytes != end){
-                file.write(bytes);
-            }else{
-                break;
-            }
+        while (toRead) {
+            QByteArray bytes = m_socket->readAll();
+            file.write(bytes);
+            toRead -= bytes.size();
         }
         //注意加锁
         file.close();
     }
-
 }
 
 QString Client::getPath(int fileIndex)
@@ -545,13 +546,13 @@ void Client::writeSocket(const QByteArray &bytes)
     QDataStream out(&data, QIODevice::WriteOnly);
     //m_socket->write(bytes);
     out << bytes;
-    if(bytes.size() > 0 && bytes.size() % 65536 == 0){
+    /*if(bytes.size() > 0 && bytes.size() % 65536 == 0){
         //m_socket->write(end);
         out << end;
         //qDebug()<<"end";
-    }
+    }*/
     m_socket->write(data);
-    m_socket->flush();
+    //m_socket->flush();
 }
 
 void Client::accept()

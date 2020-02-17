@@ -56,7 +56,7 @@ Message& Message::operator= (const Message &msg){
 
 //风险：万一message对象之前使用了，但是里面的数据没有变，就会搞错
 void Message::dealFile(){
-    int chunk = 65536;
+    int chunk = 1048576;
     if(!filePath().isEmpty()){
         QFile file(filePath());
         if(file.exists()){
@@ -92,7 +92,7 @@ void Message::saveSmallFile(const QString& basePath, Place place){
                     basePath + ss[type()] + "/" + fileName() :
                     basePath + ss[type()] + "/chat" + QString().setNum(fileIndex()) + "___" + fileName();
 
-        if(fileSize() < 65536) {
+        if(fileSize() < 1048576) {
             QFile file(localPath);
             if(!file.exists()){
                 QByteArray bytes = QByteArray::fromBase64(m_textMsg.toUtf8());

@@ -45,15 +45,6 @@ public:
 
     Q_INVOKABLE void dealDownload(const QString &path);
 
-
-
-    /*Q_INVOKABLE void test(){
-        User user;
-        user.setAvatarPath("D:\\QtProject\\chatAll\\Client\\resource\\picture\\avatar01.jpg");
-        user.loadDataFromPath();
-        user.saveAvatar("D:/QtProject/chatAll/Client/resource/");
-    }*/
-
     void responseHandle();
 
     void dealData();
@@ -91,9 +82,8 @@ signals:
     void acceptSuccess();
 
 private:
-    QByteArray rawData(const QString &path);
 
-    QString saveData(const QByteArray &bytes);
+    void writeSocket(const QByteArray &bytes);
 
     static void appendUser(QQmlListProperty<User> *, User *);
     static int userCount(QQmlListProperty<User> *);
@@ -107,11 +97,13 @@ private:
     QTcpSocket *socket;
     QString m_token;
     QList<User *> m_searchContent;
+    qint64 chunk;
     //QList<Message *>m_msg;
     User *m_user;
     QString m_downloadPath;
     QList<QString> typeMap;
     QByteArray m_data;
+    QDataStream in;
 };
 
 #endif // CLIENT_H
