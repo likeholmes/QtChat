@@ -32,7 +32,7 @@ Page {
                 id: avatar
                 width: 60
                 height: 60
-                source: "file:/" + user.avatarPath
+                source: "file:///" + user.avatarPath
             }
             Label {
                 leftPadding: 15
@@ -191,7 +191,7 @@ Page {
 
                         Image {
                             id: contactAvatar
-                            source: "file:/" + model.avatar
+                            source: "file:///" + model.avatar
                             width: 60
                             height: 60
                         }

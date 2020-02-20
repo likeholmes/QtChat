@@ -43,13 +43,12 @@ Page{
             Layout.fillHeight: true
             Layout.fillWidth: true
             Layout.margins: rowPane.leftPadding
-
             spacing: 15
 
             delegate: Column {
                 id: itemColumn
                 property bool sentByMe: model.sender !== conversionWith.account
-                property bool isFileExist: model.type !== Message.Text && model.fileExist(model.content)
+                property bool isFileExist: model.type !== Message.Text && client.fileExist(model.content)
                 anchors.right: sentByMe ? parent.right : undefined
 
                 Row {
@@ -60,7 +59,7 @@ Page{
                     Image {
                         width: 40
                         height: 40
-                        source: "file:/" + conversionWith.avatarPath
+                        source: "file:///" + conversionWith.avatarPath
                         visible: !sentByMe
                     }
 
@@ -69,8 +68,8 @@ Page{
                         width: 160
                         height: 160
                         visible: model.type !== Message.Text
-                        enabled: model.type === Message.Text
-                        source:  model.type === Message.Picture && isFileExsit ? "file:/" + model.content : "默认缩略图"
+                        source:  {model.type === Message.Picture && itemColumn.isFileExist ?
+                                      "file:///" + model.content : "file:///default.png"}
 
                         Button {
                             id: downloadButton
@@ -152,7 +151,8 @@ Page{
                     onAccepted: {
                         isPicture = fileUrl.toString().indexOf("png") > 0 || fileUrl.toString().indexOf("jpg") > 0;
                         msg.type = isPicture ? Message.Picture : Message.File;
-                        msg.filePath = fileUrl.toLocalFile();
+                        msg.filePath = fileUrl.toString();
+                        msg.textMsg = msg.filePath;
                         client.dealSendMsg(msg);
                     }
                 }

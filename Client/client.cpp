@@ -23,7 +23,7 @@ Client::Client(QObject *parent):
     socket = new QTcpSocket();
     socket->connectToHost("localhost", 1031);
     in.setDevice(socket);
-    chunk = 1048576;
+    chunk = 655360;
     //connect(&socket, SIGNAL(QTcpSocket::error()), this, &Client::dealError);
     //connect(socket, &QTcpSocket::readyRead, this, &Client::responseHandle);
     //connect(&socket, &QTcpSocket::disconnected, &socket, &QTcpSocket::deleteLater);
@@ -344,3 +344,10 @@ void Client::writeSocket(const QByteArray &bytes)
     out << bytes;
     socket->write(data);
 }
+
+bool Client::fileExist(const QString &path)
+{
+    QString newPath = path;
+    return QFile::exists(newPath.remove("file:///"));
+}
+

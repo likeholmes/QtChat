@@ -83,7 +83,7 @@ public:
     }
 
     void setFilePath(const QString& filePath){
-        m_filePath = QString(filePath).replace('\\', '/');
+        m_filePath = QString(filePath).replace('\\', '/').remove("file:///");
     }
 
     int fileIndex() const{
@@ -124,7 +124,7 @@ public:
 
     QJsonObject toJsonObject() const;
 
-
+    QString getFileName();
 
 signals:
 

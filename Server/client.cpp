@@ -31,6 +31,7 @@ void Client::disconnect(){
 
 void Client::nextPendingRequest()
 {
+    qDebug() <<"nextPendingRequest---";
     //如果传来的数据是文件该怎么办，这些值该怎么处理？如果连起来处理呢
     bool status = false;
     QByteArray bytes;
@@ -43,6 +44,7 @@ void Client::nextPendingRequest()
         }
         in.startTransaction();
         in >> bytes;
+        qDebug() << "传输的数据大小" << bytes.size();
 
     }while(m_socket->bytesAvailable()&&(status = in.commitTransaction()));
     if(in.commitTransaction() && bytes != m_data){
@@ -51,6 +53,7 @@ void Client::nextPendingRequest()
         m_data.clear();
         emit newRequest();
     }
+    qDebug() <<"nextPendingRequest+++";
 }
 
 void Client::login()
@@ -271,11 +274,15 @@ void Client::addFriend()
 
 void Client::sendMsg()
 {
+    qDebug() << "sendMsg---";
     Response rp;
     rp.setAction(Response::Send);
     //rp.setAuthur(m_user);
     rp.setResponse(Response::SUCCESS);
+    qDebug() << "转成msg---";
     Message msg = m_request.msgContent();
+    qDebug() << "filePath : " << msg.filePath();
+    qDebug() << "转成msg+++";
     QSqlTableModel model;
     model.setTable("conversations");
     model.setEditStrategy(QSqlTableModel::OnManualSubmit);
@@ -286,23 +293,30 @@ void Client::sendMsg()
     }else{
         int fileIndex = QDateTime::currentMSecsSinceEpoch();
         msg.setFileIndex(fileIndex);
+        qDebug() << "获取content---";
         QString content = msg.textMsg();
+        qDebug() << "获取content+++";
         if(msg.type() != Message::Text){
-            if(msg.fileSize() < 65536) {
+            if(msg.fileSize() < 655360) {
+                qDebug() <<"小于655360---";
                 //fileIndex和filename和filePath的设置问题我已经晕了
                 msg.saveSmallFile(resourceBasePath, Message::Server);
                 //总之通过某种操作已经将小文件保存到了服务器上
                 //并将文件路径保存到了存储文件的表中
                 //如何将fileIndex传给另一个客户端呢
+                qDebug() <<"小于655360+++";
             }else {
+                qDebug() <<"大于655360---";
                 upload(msg);
                 //加入到数据库中
+                qDebug() <<"大于655360+++";
             }
             QSqlQuery query;
-            if(!query.exec(QString("INSERT INTO IGNORE files (fileIndex, path, type)"
+            if(!query.exec(QString("INSERT INTO files (fileIndex, path, type)"
                                   "VALUES(%1, '%2', %3)").arg(fileIndex)
                            .arg(msg.filePath()).arg(msg.type()))){
                 err = "未成功将文件数据插入文件表中";
+                qDebug() <<query.lastError();
                 rp.setResponse(Response::FAILURE);
             }
             content = QString().setNum(fileIndex);
@@ -331,6 +345,7 @@ void Client::sendMsg()
     if(rp.response() == Response::SUCCESS){
         emit send(msg.recipient());
     }
+    qDebug() << "sendMsg+++";
 }
 
 void Client::receiveMsg()
@@ -424,24 +439,30 @@ void Client::download(int index)
 
 void Client::upload(Message &msg)
 {
+    qDebug() << "update---";
     QStringList typeMap;
-    typeMap[Message::File] = "file";
-    typeMap[Message::Picture] = "picture";
+    typeMap.push_back("none");
+    typeMap.push_back("text");
+    typeMap.push_back("picture");
+    typeMap.push_back("file");
     QString path = resourceBasePath + typeMap.at(msg.type()) + "/" + msg.fileName();
     QFile file(path);
     if(!file.exists()){
         file.open(QIODevice::WriteOnly);
         //需要判断该文件是否存在
         qint64 toRead = msg.fileSize();
+        qDebug() << "filesize = " << toRead;
         //注意加锁
         while (toRead) {
             QByteArray bytes = m_socket->readAll();
             file.write(bytes);
+            qDebug() << "一次读取的数据为"<<bytes.size();
             toRead -= bytes.size();
         }
         //注意加锁
         file.close();
     }
+    qDebug() << "update+++";
 }
 
 QString Client::getPath(int fileIndex)

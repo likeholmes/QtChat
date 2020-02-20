@@ -6,6 +6,7 @@
 #include <QFile>
 #include <QDir>
 #include <QDateTime>
+#include <QDebug>
 
 Message::Message(QObject *parent) : QObject(parent)
 {
@@ -56,11 +57,12 @@ Message& Message::operator= (const Message &msg){
 
 //风险：万一message对象之前使用了，但是里面的数据没有变，就会搞错
 void Message::dealFile(){
-    int chunk = 1048576;
+    int chunk = 655360;
     if(!filePath().isEmpty()){
         QFile file(filePath());
         if(file.exists()){
-            QString aname = file.fileName();
+            QString aname = getFileName();
+            qDebug() << "fileName:" <<aname;
             if(aname.contains("chat") && aname.contains("___")){
                 //从服务器端下载下来存在本地的文件
                 aname.remove(0, 4);
@@ -68,7 +70,7 @@ void Message::dealFile(){
                 setFileIndex(list[0].toInt());
                 setFileName(list[1]);
             }else{
-                setFileName(file.fileName());
+                setFileName(aname);
             }
             setFileSize(file.size());
             file.open(QIODevice::ReadOnly);
@@ -83,28 +85,35 @@ void Message::dealFile(){
 }
 
 void Message::saveSmallFile(const QString& basePath, Place place){
-    if(type() != Text){
-        QStringList ss;
-        ss[Picture] = "picture";
-        ss[File] = "file";
+    qDebug() << "saveSmallFile---";
+    QStringList ss;
+    ss.push_back("none");
+    ss.push_back("text");
+    ss.push_back("picture");
+    ss.push_back("file");
 
+    if(type() != Text){   
         QString localPath = place == Server ?
                     basePath + ss[type()] + "/" + fileName() :
                     basePath + ss[type()] + "/chat" + QString().setNum(fileIndex()) + "___" + fileName();
-
-        if(fileSize() < 1048576) {
+        qDebug() << "localPath:"<<localPath;
+        if(fileSize() < 655360) {
             QFile file(localPath);
             if(!file.exists()){
+                qDebug() << "文件不存在";
                 QByteArray bytes = QByteArray::fromBase64(m_textMsg.toUtf8());
+                qDebug() << "已写入bytes";
                 file.open(QIODevice::WriteOnly);
                 file.write(bytes);
                 file.close();
+                qDebug() << "关闭文件";
            }
         }
         if(place == Client)
             setTextMsg(localPath);
         setFilePath(localPath);
     }
+    qDebug() << "saveSmallFile+++";
 }
 
 QJsonObject Message::toJsonObject() const
@@ -135,7 +144,10 @@ void Message::setTimeStamp()
     m_timeStamp = QDateTime::currentDateTime().toString(Qt::ISODate);
 }
 
-
+QString Message::getFileName()
+{
+    return filePath().right(filePath().length() - filePath().lastIndexOf('/') - 1);
+}
 
 
 

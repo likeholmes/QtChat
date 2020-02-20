@@ -21,7 +21,7 @@ public:
     QHash<int, QByteArray> roleNames() const override;
     QVariant data(const QModelIndex &idx, int role = Qt::DisplayRole) const override;
 
-    Q_INVOKABLE bool fileExist(const QString &path);
+
 
 signals:
     void recipientChanged();

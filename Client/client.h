@@ -45,6 +45,8 @@ public:
 
     Q_INVOKABLE void dealDownload(const QString &path);
 
+    Q_INVOKABLE bool fileExist(const QString &path);
+
     void responseHandle();
 
     void dealData();

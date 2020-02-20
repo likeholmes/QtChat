@@ -68,7 +68,7 @@ Page {
                 id: fileDialog
 
                 title: qsTr("选择一个文件")
-                selectedNameFilter: qsTr("Image files (*.png *.jpg)")
+                selectedNameFilter: "Image files (*.png *.jpg)"
                 nameFilters: [ "Image files (*.png *.jpg)", "All files (*)" ]
 
                 onAccepted: {

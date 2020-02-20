@@ -101,9 +101,7 @@ void SqlConversationModel::sendMessage(const Message &msg)
     QSqlRecord newRecord = record();
     newRecord.setValue("type", msg.type());
     newRecord.setValue("content", msg.textMsg());
-    qDebug()<<"检查authur"<<msg.authur();
     newRecord.setValue("sender", msg.authur());
-    qDebug()<<"检查recipient"<<msg.recipient();
     newRecord.setValue("receiver", msg.recipient());
     if(!msg.timeStamp().isEmpty())
         timeStamp = msg.timeStamp();
@@ -123,10 +121,5 @@ void SqlConversationModel::sendMessage(const Message &msg)
 void SqlConversationModel::sendMessage(Message *msg)
 {
     sendMessage(*msg);
-}
-
-bool SqlConversationModel::fileExist(const QString &path)
-{
-    return QFileInfo::exists(path);
 }
 
