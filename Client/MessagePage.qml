@@ -69,7 +69,7 @@ Page{
                         height: 160
                         visible: model.type !== Message.Text
                         source:  {model.type === Message.Picture && itemColumn.isFileExist ?
-                                      "file:///" + model.content : "file:///default.png"}
+                                      "file:///" + model.content : "file:///D:/QtProject/chatAll/Client/resource/default.png"}
 
                         Button {
                             id: downloadButton
@@ -82,10 +82,11 @@ Page{
                                  onDownloadSuccess: {
                                      //打开网址对应的文件
                                     isFileExist = true
+                                     console.log("download");
                                  }
                             }
                             onClicked: {
-                                client.dealDownload(model.content)
+                                client.dealDownload(model.fileIndex)
                             }
                         }
                     }

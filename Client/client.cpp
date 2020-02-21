@@ -111,7 +111,7 @@ void Client::dealSendMsg(Message *msg)
         upload(newMsg.filePath());
 }
 
-void Client::dealDownload(const QString& path)
+void Client::dealDownload(int fileIndex)
 {
     //socket->abort();
 
@@ -119,12 +119,6 @@ void Client::dealDownload(const QString& path)
     request.setAuthur(*m_user);
     request.setToken(m_token);
     request.setAction(Request::Download);
-
-
-    QStringList list = path.split('/');
-    QString base = list[list.size() - 1].split("___")[0];
-    int fileIndex = base.remove(0, 4).toInt();
-
     request.setDownloadIndex(fileIndex);
 
     writeSocket(request.toByteArray());
@@ -224,7 +218,16 @@ void Client::responseHandle()
             for(int i = 0; i < list.size(); ++i)
             {
                 Message msg = list.at(i);
-                qDebug() << "client:authur "<<msg.authur();
+                //qDebug() << "client:authur "<<msg.authur();
+                if (msg.type() != Message::Text){
+                    if(msg.fileSize() < chunk){
+                        msg.saveSmallFile(resourceBasePath, Message::Client);
+                    }else{
+                        QString path = resourceBasePath + typeMap.at(msg.type()) + "/" + msg.fileName();
+                        msg.setTextMsg(path);
+                        download(msg);
+                    }
+                }
                 model.sendMessage(&msg);
             }
             emit msgReceived(); //新加的消息会有红点显示
@@ -270,16 +273,19 @@ void Client::upload(const QString &path)
     //注意加锁
     int minChunk = 65536; //防止一次读取大文件
     while (!file.atEnd()) {
+        qDebug() << "文件读取中。。。";
         socket->write(file.read(minChunk));
     }
+    qDebug() << "文件读取结束";
     //注意加锁
     file.close();
 }
 
 void Client::download(const Message &msg)
 {
-    QString path = resourceBasePath + typeMap.at(msg.type()) + "/" + msg.fileName();
-    QFile file(path);
+    qDebug() << "download---";
+
+    QFile file(msg.textMsg());
     file.open(QIODevice::WriteOnly);
     //需要判断该文件是否存在
     if(!file.exists()){
@@ -287,13 +293,16 @@ void Client::download(const Message &msg)
         qint64 toRead = msg.fileSize();
         //注意加锁
         while (toRead) {
+            socket->waitForReadyRead();
             QByteArray bytes = socket->readAll();
+            qDebug() << "一次读取字节"<<bytes.size();
             file.write(bytes);
             toRead -= bytes.size();
         }
         //注意加锁
         file.close();
     }
+    qDebug() << "download+++";
 }
 
 QQmlListProperty<User> Client::searchContent() {

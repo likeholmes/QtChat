@@ -300,7 +300,7 @@ void Client::sendMsg()
             if(msg.fileSize() < 655360) {
                 qDebug() <<"小于655360---";
                 //fileIndex和filename和filePath的设置问题我已经晕了
-                msg.saveSmallFile(resourceBasePath, Message::Server);
+                msg.saveSmallFile(resourceBasePath);
                 //总之通过某种操作已经将小文件保存到了服务器上
                 //并将文件路径保存到了存储文件的表中
                 //如何将fileIndex传给另一个客户端呢
@@ -329,6 +329,7 @@ void Client::sendMsg()
         newRecord.setValue("time", msg.timeStamp());
         newRecord.setValue("content", content);
         newRecord.setValue("received", 0);
+        //msg.textMsg() = content;
         if(!model.insertRecord(model.rowCount(), newRecord)){
             err = "未成功将消息插入对话表中";
             qDebug()<<model.lastError();
@@ -425,9 +426,10 @@ void Client::download(int index)
         writeSocket(rp.toByteArray());
 
         while (!file.atEnd()) {
+            qDebug() << "读取文件中。。。";
             m_socket->write(file.read(chunk));
         }
-
+        qDebug() << "读取结束";
         //注意加锁
 
         file.close();
@@ -452,8 +454,9 @@ void Client::upload(Message &msg)
         //需要判断该文件是否存在
         qint64 toRead = msg.fileSize();
         qDebug() << "filesize = " << toRead;
-        //注意加锁
+        //注意加锁 
         while (toRead) {
+            m_socket->waitForReadyRead();
             QByteArray bytes = m_socket->readAll();
             file.write(bytes);
             qDebug() << "一次读取的数据为"<<bytes.size();

@@ -20,6 +20,7 @@ static void createTable()
                     "`id` INT NOT NULL AUTO_INCREMENT,"
                     "`type` INT NOT NULL,"
                     "`content` TEXT NOT NULL,"
+                    "`fileIndex` INT NOT NULL DEFAULT 0, "
                     "`sender` TEXT NOT NULL,"
                     "`receiver` TEXT NOT NULL,"
                     "`time` TEXT NOT NULL, "
@@ -77,9 +78,10 @@ QHash<int, QByteArray> SqlConversationModel::roleNames() const
     names[Qt::UserRole] = "id";
     names[Qt::UserRole + 1] = "type";
     names[Qt::UserRole + 2] = "content";
-    names[Qt::UserRole + 3] = "sender";
-    names[Qt::UserRole + 4] = "receiver";
-    names[Qt::UserRole + 5] = "time";
+    names[Qt::UserRole + 3] = "fileIndex";
+    names[Qt::UserRole + 4] = "sender";
+    names[Qt::UserRole + 5] = "receiver";
+    names[Qt::UserRole + 6] = "time";
     return names;
 }
 
@@ -101,6 +103,7 @@ void SqlConversationModel::sendMessage(const Message &msg)
     QSqlRecord newRecord = record();
     newRecord.setValue("type", msg.type());
     newRecord.setValue("content", msg.textMsg());
+    newRecord.setValue("fileIndex", msg.fileIndex());
     newRecord.setValue("sender", msg.authur());
     newRecord.setValue("receiver", msg.recipient());
     if(!msg.timeStamp().isEmpty())

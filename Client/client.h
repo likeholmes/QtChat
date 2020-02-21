@@ -43,7 +43,7 @@ public:
 
     Q_INVOKABLE void dealSendMsg(Message* message);
 
-    Q_INVOKABLE void dealDownload(const QString &path);
+    Q_INVOKABLE void dealDownload(int fileIndex);
 
     Q_INVOKABLE bool fileExist(const QString &path);
 

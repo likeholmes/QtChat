@@ -61,17 +61,7 @@ void Message::dealFile(){
     if(!filePath().isEmpty()){
         QFile file(filePath());
         if(file.exists()){
-            QString aname = getFileName();
-            qDebug() << "fileName:" <<aname;
-            if(aname.contains("chat") && aname.contains("___")){
-                //从服务器端下载下来存在本地的文件
-                aname.remove(0, 4);
-                QStringList list = aname.split("___");
-                setFileIndex(list[0].toInt());
-                setFileName(list[1]);
-            }else{
-                setFileName(aname);
-            }
+            setFileName(getFileName());
             setFileSize(file.size());
             file.open(QIODevice::ReadOnly);
             if(fileSize() < chunk){
@@ -84,7 +74,7 @@ void Message::dealFile(){
     }
 }
 
-void Message::saveSmallFile(const QString& basePath, Place place){
+void Message::saveSmallFile(const QString& basePath){
     qDebug() << "saveSmallFile---";
     QStringList ss;
     ss.push_back("none");
@@ -93,15 +83,13 @@ void Message::saveSmallFile(const QString& basePath, Place place){
     ss.push_back("file");
 
     if(type() != Text){   
-        QString localPath = place == Server ?
-                    basePath + ss[type()] + "/" + fileName() :
-                    basePath + ss[type()] + "/chat" + QString().setNum(fileIndex()) + "___" + fileName();
+        QString localPath = basePath + ss[type()] + "/" + fileName();
         qDebug() << "localPath:"<<localPath;
         if(fileSize() < 655360) {
             QFile file(localPath);
             if(!file.exists()){
                 qDebug() << "文件不存在";
-                QByteArray bytes = QByteArray::fromBase64(m_textMsg.toUtf8());
+                QByteArray bytes = QByteArray::fromBase64(textMsg().toUtf8());
                 qDebug() << "已写入bytes";
                 file.open(QIODevice::WriteOnly);
                 file.write(bytes);
@@ -109,8 +97,7 @@ void Message::saveSmallFile(const QString& basePath, Place place){
                 qDebug() << "关闭文件";
            }
         }
-        if(place == Client)
-            setTextMsg(localPath);
+        setTextMsg(localPath);
         setFilePath(localPath);
     }
     qDebug() << "saveSmallFile+++";

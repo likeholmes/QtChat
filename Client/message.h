@@ -43,10 +43,6 @@ public:
         None, Text, Picture, File
     };
 
-    enum Place{
-        Client, Server
-    };
-
     Q_ENUM(Type)
 
     Type type() const{
@@ -120,7 +116,7 @@ public:
 
     void dealFile();
 
-    void saveSmallFile(const QString& basePath, Place place);
+    void saveSmallFile(const QString& basePath);
 
     QJsonObject toJsonObject() const;
 
