@@ -45,6 +45,15 @@ Page{
             Layout.margins: rowPane.leftPadding
             spacing: 15
 
+            Connections {
+                         target: client
+                         onDownloadSuccess: {
+                             //打开网址对应的文件
+                            isFileExist = true
+                             console.log("download");
+                         }
+                    }
+
             delegate: Column {
                 id: itemColumn
                 property bool sentByMe: model.sender !== conversionWith.account
@@ -77,14 +86,7 @@ Page{
                             height: parent.height
                             opacity: 0
                             enabled: !isFileExist
-                            Connections {
-                                 target: client
-                                 onDownloadSuccess: {
-                                     //打开网址对应的文件
-                                    isFileExist = true
-                                     console.log("download");
-                                 }
-                            }
+
                             onClicked: {
                                 client.dealDownload(model.fileIndex)
                             }

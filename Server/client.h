@@ -70,8 +70,6 @@ private:
 
     QString getAccount(int id);
 
-    int getFileId(int fileIndex);
-
     Request m_request;
     QTcpSocket *m_socket;
     QString m_token;

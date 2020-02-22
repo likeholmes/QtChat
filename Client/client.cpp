@@ -18,8 +18,10 @@ Client::Client(QObject *parent):
     QObject(parent)
 {
 
-    typeMap.insert(Message::Picture, "picture");
-    typeMap.insert(Message::File, "file");
+    typeMap.push_back("none");
+    typeMap.push_back("text");
+    typeMap.push_back("picture");
+    typeMap.push_back("file");
     socket = new QTcpSocket();
     socket->connectToHost("localhost", 1031);
     in.setDevice(socket);
@@ -221,11 +223,11 @@ void Client::responseHandle()
                 //qDebug() << "client:authur "<<msg.authur();
                 if (msg.type() != Message::Text){
                     if(msg.fileSize() < chunk){
-                        msg.saveSmallFile(resourceBasePath, Message::Client);
+                        msg.saveSmallFile(resourceBasePath);
                     }else{
                         QString path = resourceBasePath + typeMap.at(msg.type()) + "/" + msg.fileName();
                         msg.setTextMsg(path);
-                        download(msg);
+                        //download(msg);
                     }
                 }
                 model.sendMessage(&msg);
@@ -284,11 +286,12 @@ void Client::upload(const QString &path)
 void Client::download(const Message &msg)
 {
     qDebug() << "download---";
+    QString path = resourceBasePath + typeMap.at(msg.type()) + "/" + msg.fileName();
+    QFile file(path);
 
-    QFile file(msg.textMsg());
-    file.open(QIODevice::WriteOnly);
     //需要判断该文件是否存在
     if(!file.exists()){
+        file.open(QIODevice::WriteOnly);
         //int minChunk = 65536;
         qint64 toRead = msg.fileSize();
         //注意加锁

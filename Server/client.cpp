@@ -143,23 +143,26 @@ void Client::doRegister()
         {
             user.saveAvatar(resourceBasePath);
             //插入存放头像的数据表中，获取对应的index
-            int fileIndex = QDateTime::currentMSecsSinceEpoch();
             QSqlQuery query;
             qDebug()<<user.avatarPath();
-            qDebug()<<fileIndex;
-            QString sql = QString("INSERT INTO files (path, fileIndex, type) VALUES("
-                                  "'%1', %2, 2)").arg(user.avatarPath()).arg(fileIndex);
+            QString sql = QString("INSERT INTO files (path, type) VALUES("
+                                  "'%1', 2)").arg(user.avatarPath());
             if(!query.exec(sql)){
                 qDebug() << query.lastError();
                 err = "头像插入失败";
                 return;
                 //response = Response::FAILURE;
             }else {
-                avatarId = getFileId(fileIndex);
+                if(query.exec("SELECT * FROM files") && query.last()){
+                    avatarId = query.value("id").toInt();
+                }else{
+                    err = "查询文件失败";
+                    qDebug() << query.lastError();
+                }
             }
         }else{
             qDebug() << "用户未上传头像";
-            user.setAvatarPath(getPath(0));
+            user.setAvatarPath(getPath(1));
             user.loadDataFromPath();
         }
         newRecord.setValue("avatar", avatarId);
@@ -291,8 +294,6 @@ void Client::sendMsg()
         err = "未成功加载对话表";
         rp.setResponse(Response::FAILURE);
     }else{
-        int fileIndex = QDateTime::currentMSecsSinceEpoch();
-        msg.setFileIndex(fileIndex);
         qDebug() << "获取content---";
         QString content = msg.textMsg();
         qDebug() << "获取content+++";
@@ -312,14 +313,24 @@ void Client::sendMsg()
                 qDebug() <<"大于655360+++";
             }
             QSqlQuery query;
-            if(!query.exec(QString("INSERT INTO files (fileIndex, path, type)"
-                                  "VALUES(%1, '%2', %3)").arg(fileIndex)
+            if(!query.exec(QString("INSERT INTO files (path, type)"
+                                  "VALUES('%1', %2)")
                            .arg(msg.filePath()).arg(msg.type()))){
                 err = "未成功将文件数据插入文件表中";
                 qDebug() <<query.lastError();
                 rp.setResponse(Response::FAILURE);
+            }else{
+                if(query.exec("SELECT * FROM files") && query.last())
+                {
+                    int id = query.value("id").toInt();
+                    content = QString().setNum(id);
+                    msg.setFileIndex(id);
+                }else{
+                    err = "未成功将查询文件";
+                    qDebug() <<query.lastError();
+                    rp.setResponse(Response::FAILURE);
+                }
             }
-            content = QString().setNum(fileIndex);
         }
         //加到数据库中
         QSqlRecord newRecord = model.record();
@@ -415,7 +426,8 @@ void Client::download(int index)
     if(file.exists()){
         msg.setType(getType(index));
         msg.setFileIndex(index);
-        msg.setFileName(file.fileName());
+        msg.setFilePath(file.fileName());
+        msg.setFileName(msg.getFileName());
         msg.setFileSize(file.size());
         rp.setMsgContent(msg);
 
@@ -474,7 +486,7 @@ QString Client::getPath(int fileIndex)
     QSqlQuery query;
     QString err;
     QString res;
-    if(!query.exec("SELECT * FROM files WHERE fileIndex = " + QString().setNum(fileIndex)))
+    if(!query.exec("SELECT * FROM files WHERE id = " + QString().setNum(fileIndex)))
     {
         err = "执行查询文件地址失败";
     }else if(query.next()){
@@ -531,7 +543,7 @@ Message::Type Client::getType(int fileIndex)
     QSqlQuery query;
     QString err;
     Message::Type res = Message::File;
-    if(!query.exec("SELECT * FROM files WHERE fileIndex = " + QString().setNum(fileIndex)))
+    if(!query.exec("SELECT * FROM files WHERE id = " + QString().setNum(fileIndex)))
     {
         err = "执行查询文件类型失败";
     }else if(query.next()){
@@ -545,24 +557,6 @@ Message::Type Client::getType(int fileIndex)
     return res;
 }
 
-int Client::getFileId(int fileIndex)
-{
-    QSqlQuery query;
-    QString err;
-    int res = 1;
-    if(!query.exec("SELECT * FROM files WHERE fileIndex = " + QString().setNum(fileIndex)))
-    {
-        err = "执行查询文件id失败";
-    }else if(query.next()){
-        res = query.value("id").toInt();
-    }else{
-        err = "不是有效的fileIndex";
-    }
-
-    if(!err.isEmpty())
-        emit error(err);
-    return res;
-}
 
 void Client::writeSocket(const QByteArray &bytes)
 {
